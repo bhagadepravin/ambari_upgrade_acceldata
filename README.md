@@ -1,4 +1,4 @@
-# ambari_upgrade_acceldata
+# Acceldata Ambari Upgrade Steps:-
 
 
 ## 1. Ambari Service Configs backup and restore:
