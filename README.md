@@ -3,8 +3,7 @@
 
 ## 1. Ambari Service Configs backup and restore:
 
-Execute:
-https://github.com/bhagadepravin/ambari_upgrade_acceldata/blob/main/generate_sql_backup_restore.sh
+-  [generate_sql_backup_restore.sh](https://github.com/bhagadepravin/ambari_upgrade_acceldata/blob/main/generate_sql_backup_restore.sh)
 
 1. **Navigate to the directory containing the generated SQL script**:
    ```bash
@@ -37,9 +36,13 @@ This will execute the SQL commands contained in `backup_configs.sql` within the 
 
 ## 2. Update ambari_upgrade.yml
 
+-  [ambari_upgrade.yml](https://github.com/bhagadepravin/ambari_upgrade_acceldata/blob/main/ambari_upgrade.yml)
+
  - Update "ambari_version" , odp_version, Ambari and ODP repo, Database details.
 
 ## 3. Execute ambari_upgrade.sh
+
+-  [ambari_upgrade.sh](https://github.com/bhagadepravin/ambari_upgrade_acceldata/blob/main/ambari_upgrade.sh)
 
 Here's a Bash script that automates the setup and execution of the Ansible playbook for upgrading Ambari and ODP. This script performs the following tasks:
 
