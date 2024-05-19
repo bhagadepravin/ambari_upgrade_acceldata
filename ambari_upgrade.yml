@@ -1,0 +1,149 @@
+---
+- name: Upgrade Ambari and ODP
+  hosts: all
+  become: yes
+  vars:
+    ambari_version: "2.7.8.0-1"
+    odp_version: "3.2.3.0-2"
+    ambari_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/Ambari-2.7.8.0-1/"
+    odp_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/3.2.3.0-2/"
+    backup_dir: "/tmp/backup"
+    databases: ["ambari", "hive", "ranger", "rangerkms", "oozie"]
+    db_user: "root"
+    ambari_server_node: "localhost"
+    openjdk_path: "/usr/lib/jvm/java-1.8.0-openjdk"
+    java: "openjdk"
+
+    database_options:
+      ambari_db_name: 'ambari'
+      ambari_db_username: 'ambari'
+      ambari_db_password: 'bigdata'
+
+  pre_tasks:
+    - name: Ensure passwordless SSH is set up
+      authorized_key:
+        user: "{{ ansible_user }}"
+        state: present
+        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Stop Ambari server on the server node
+      systemd:
+        name: ambari-server
+        state: stopped
+      when: inventory_hostname == ambari_server_node
+
+    - name: Stop Ambari agent on all nodes
+      systemd:
+        name: ambari-agent
+        state: stopped
+
+    - name: Create backup directory
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+
+    - name: Backup Ambari databases
+      command: >
+        mysqldump {{ item }} > {{ backup_dir }}/{{ item }}_backup.sql
+      with_items: "{{ databases }}"
+      become_user: "{{ db_user }}"
+
+  tasks:
+    - name: Erase Ambari server and agent
+      yum:
+        name:
+          - ambari-server
+          - ambari-agent
+        state: absent
+
+    - name: Remove existing Ambari repo files
+      file:
+        path: /etc/yum.repos.d/ambari.repo
+        state: absent
+
+    - name: Clean all yum cache
+      command: yum clean all
+
+    - name: Add new Ambari repo file
+      copy:
+        dest: /etc/yum.repos.d/ambari.repo
+        content: |
+          [ambari]
+          async = 1
+          baseurl = {{ ambari_repo_url }}
+          gpgcheck = 0
+          name = ambari Version - Ambari-{{ ambari_version }}
+
+    - name: Add ODP repo files
+      copy:
+        dest: /etc/yum.repos.d/odp.repo
+        content: |
+          [odp-main]
+          name=ODP Main Repository
+          baseurl={{ odp_repo_url }}
+          gpgcheck=0
+          enabled=1
+
+    - name: Install Ambari server and agent on the server node
+      yum:
+        name:
+          - ambari-server
+          - ambari-agent
+        state: present
+      when: inventory_hostname == ambari_server_node
+
+    - name: Install Ambari agent on all other nodes
+      yum:
+        name: ambari-agent
+        state: present
+      when: inventory_hostname != ambari_server_node
+
+    - name: Set the Ambari Server database setup options
+      set_fact:
+        ambari_database_options: "--database=mysql \
+                                  --databasehost={{ ansible_fqdn }} \
+                                  --databaseport=3306 \
+                                  --databasename={{ database_options.ambari_db_name }} \
+                                  --databaseusername={{ database_options.ambari_db_username }} \
+                                  --databasepassword={{ database_options.ambari_db_password }}"
+
+    - name: Set the Ambari Server Java setup option (OpenJDK)
+      set_fact:
+        ambari_java_options: "-j {{ openjdk_path }}"
+      when: java == "openjdk"
+
+    - name: Run Ambari Server setup
+      shell: /usr/sbin/ambari-server setup -s {{ ambari_java_options|default("") }} {{ ambari_database_options|default("") }}
+      notify: Restart ambari-server
+
+    - name: Start Ambari server on the server node
+      systemd:
+        name: ambari-server
+        state: started
+      when: inventory_hostname == ambari_server_node
+      notify: Start Ambari agent on all nodes
+
+  handlers:
+    - name: Restart ambari-server
+      systemd:
+        name: ambari-server
+        state: restarted
+
+    - name: Start Ambari agent on all nodes
+      systemd:
+        name: ambari-agent
+        state: started
+      when: inventory_hostname != ambari_server_node
+
+  post_tasks:
+    - name: Verify Ambari server status
+      systemd:
+        name: ambari-server
+        state: started
+      when: inventory_hostname == ambari_server_node
+
+    - name: Verify Ambari agent status on all nodes
+      systemd:
+        name: ambari-agent
+        state: started
