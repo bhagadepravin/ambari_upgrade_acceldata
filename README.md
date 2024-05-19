@@ -3,6 +3,8 @@
 
 # Ambari Service Configs backup and restore:
 
+Execute:
+https://github.com/bhagadepravin/ambari_upgrade_acceldata/blob/main/generate_sql_backup_restore.sh
 
 1. **Navigate to the directory containing the generated SQL script**:
    ```bash
