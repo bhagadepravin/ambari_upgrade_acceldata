@@ -1,0 +1,1 @@
+# ambari_upgrade_acceldata
