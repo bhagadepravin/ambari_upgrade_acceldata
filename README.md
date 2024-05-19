@@ -1,7 +1,7 @@
 # ambari_upgrade_acceldata
 
 
-# Ambari Service Configs backup and restore:
+## 1. Ambari Service Configs backup and restore:
 
 Execute:
 https://github.com/bhagadepravin/ambari_upgrade_acceldata/blob/main/generate_sql_backup_restore.sh
