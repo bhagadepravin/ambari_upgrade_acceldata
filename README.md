@@ -5,6 +5,11 @@
 
 -  [generate_sql_backup_restore.sh](https://github.com/bhagadepravin/ambari_upgrade_acceldata/blob/main/generate_sql_backup_restore.sh)
 
+```
+cd ambari_upgrade_acceldata
+bash generate_sql_backup_restore.sh
+```
+
 1. **Navigate to the directory containing the generated SQL script**:
    ```bash
    cd pre_upgrade
