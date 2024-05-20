@@ -3,7 +3,7 @@
   hosts: all
   become: yes
   vars:
-    ambari_version: "2.7.6.0-1"
+    ambari_version: "2.7.8.0-1"
     odp_version: "3.2.3.0-2"
     ambari_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/Ambari-2.7.8.0-1/"
     odp_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/3.2.3.0-2/"
