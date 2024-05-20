@@ -151,15 +151,31 @@
           - ambari-server
           - ambari-agent
         state: absent
+      when: inventory_hostname in groups['ambari_agents']
+      
+    - name: Check if Ambari agent is uninstalled
+      command: rpm -q ambari-agent
+      register: ambari_agent_installed
+      failed_when: ambari_agent_installed.rc == 0
+      changed_when: false
+      ignore_errors: true
+      when: inventory_hostname in groups['ambari_agents']
 
+    - name: Verify Ambari agent is uninstalled
+      fail:
+        msg: "Ambari agent is still installed on one or more nodes"
+      when: ambari_agent_installed.rc == 0
+      
     - name: Remove existing Ambari repo files
       file:
         path: /etc/yum.repos.d/ambari.repo
         state: absent
-
+      when: inventory_hostname in groups['ambari_agents']
+      
     - name: Clean all yum cache
       command: yum clean all
-
+      when: inventory_hostname in groups['ambari_agents']
+      
     - name: Add new Ambari repo file
       copy:
         dest: /etc/yum.repos.d/ambari.repo
@@ -169,7 +185,8 @@
           baseurl = {{ ambari_repo_url }}
           gpgcheck = 0
           name = ambari Version - Ambari-{{ ambari_version }}
-
+      when: inventory_hostname in groups['ambari_agents']
+      
     - name: Add ODP repo files
       copy:
         dest: /etc/yum.repos.d/odp.repo
@@ -179,7 +196,8 @@
           baseurl={{ odp_repo_url }}
           gpgcheck=0
           enabled=1
-
+      when: inventory_hostname in groups['ambari_agents']
+      
     - name: Install Ambari server and agent on the server node
       yum:
         name:
@@ -191,7 +209,8 @@
       yum:
         name: ambari-agent
         state: present
-
+      when: inventory_hostname in groups['ambari_agents']
+      
     - name: Restore Ambari configuration files
       copy:
         src: "{{ backup_dir }}/ambari.properties"
@@ -232,7 +251,8 @@
         line: "hostname={{ hostvars[groups['ambari_server_node']|first]['ansible_fqdn'] }}"
         state: present
       notify: Restart ambari-agent
-
+      when: inventory_hostname in groups['ambari_agents']
+      
     - name: Configure the Ambari Agents to use TLS 1.2
       ini_file:
         path: /etc/ambari-agent/conf/ambari-agent.ini
@@ -240,7 +260,8 @@
         section: "security"
         option: "force"
         value: "true"
-
+      when: inventory_hostname in groups['ambari_agents']
+      
   handlers:
     - name: Wait for Ambari Server to start listening on port 8080
       wait_for:
@@ -252,3 +273,5 @@
       service:
         name: ambari-agent
         state: restarted
+      when: inventory_hostname in groups['ambari_agents']
+      
