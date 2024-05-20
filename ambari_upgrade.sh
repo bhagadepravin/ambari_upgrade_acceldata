@@ -56,7 +56,7 @@ echo "$CURRENT_HOSTNAME ansible_host=$(hostname | awk '{print $1}') ansible_user
 
 echo "[ambari_agents]" >> $INVENTORY_FILE
 while read -r HOST; do
-  echo "$HOST ansible_host=$(getent hosts $HOST | awk '{ print $1 }') ansible_user=root ansible_password=Caps@Lock" >> $INVENTORY_FILE
+  echo "$HOST ansible_host=$(getent hosts $HOST | awk '{ print $2 }') ansible_user=root ansible_password=Caps@Lock" >> $INVENTORY_FILE
 done < hostcluster.txt
 
 # Check and uninstall specified mpacks
