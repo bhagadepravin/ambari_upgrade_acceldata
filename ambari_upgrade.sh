@@ -1,5 +1,32 @@
 #!/bin/bash
 
+#!/bin/bash
+
+# Check if Ambari server is running
+ambari_status=$(ambari-server status | grep "Ambari Server running")
+
+if [ -z "$ambari_status" ]; then
+    # Ambari server is not running
+    echo "Ambari server is not running."
+    read -p "Do you want to start the Ambari server? (yes/no) " start_ambari
+    if [ "$start_ambari" = "yes" ]; then
+        # Start the Ambari server
+        ambari-server start
+        if [ $? -eq 0 ]; then
+            echo "Ambari server started successfully."
+        else
+            echo "Failed to start Ambari server. Exiting."
+            exit 1
+        fi
+    else
+        echo "Exiting without starting Ambari server."
+        exit 1
+    fi
+else
+    # Ambari server is already running
+    echo "Ambari server is already running."
+fi
+
 # Display the prompt for Spark3 service installation
 read -p "Do you have Spark3 service installed in Ambari? (yes/no) " spark3_installed
 
