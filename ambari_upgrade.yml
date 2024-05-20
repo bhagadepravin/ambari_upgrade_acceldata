@@ -12,12 +12,6 @@
     ambari_server_node: "localhost"
     openjdk_path: "/usr/lib/jvm/java-1.8.0-openjdk"
     java: "openjdk"
-
-    database_options:
-      ambari_db_name: 'ambari'
-      ambari_db_username: 'ambari'
-      ambari_db_password: 'bigdata'
-
     kdc_admin_user: "admin/admin"
     kdc_admin_password: "Acceldata@01"
 
@@ -127,15 +121,35 @@
         create: yes
       when: kerberos_status.rc == 0 and inventory_hostname == ambari_server_node
 
-    - name: Stop SPARK3 service
-      shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X PUT -d '{\"ServiceInfo\": {\"state\" : \"INSTALLED\"}}' http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
+
+    - name: Check if SPARK3 service is present
+      command: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
+      register: spark3_service
       ignore_errors: true
       when: inventory_hostname == ambari_server_node
-
+    
+    - name: Get Spark3 mpack name
+      shell: grep -w "spark3" /var/lib/ambari-server/resources/mpacks/*/mpack.json | egrep -v "common|addon" | cut -d '"' -f 4
+      register: spark3_mpack
+      changed_when: false
+      check_mode: no
+      ignore_errors: yes
+      when: spark3_service.stdout | default("") | length > 0
+    
+    - name: Uninstall Spark3 mpack if present
+      shell: ambari-server uninstall-mpack --mpack-name="{{ spark3_mpack.stdout }}"
+      when: spark3_mpack.stdout | default("") | length > 0
+      ignore_errors: yes
+    
+    - name: Stop SPARK3 service
+      shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X PUT -d '{\"ServiceInfo\": {\"state\" : \"INSTALLED\"}}' http://{{ inventory_hostname }}:8080/api/v1/clusters/{{     cluster_name }}/services/SPARK3"
+      ignore_errors: true
+      when: inventory_hostname == ambari_server_node and spark3_service.stdout | default("") | length > 0
+    
     - name: Delete SPARK3 service
       shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X DELETE http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
       ignore_errors: true
-      when: inventory_hostname == ambari_server_node
+      when: inventory_hostname == ambari_server_node and spark3_service.stdout | default("") | length > 0
 
   tasks:
     - name: Erase Ambari server and agent
