@@ -17,21 +17,23 @@ bash generate_sql_backup_restore.sh
 
 2. **Launch the MySQL client**:
    ```bash
+   mysql 
+   or
    mysql -u root -p
    ```
 
 3. **When prompted, enter your MySQL root password** (`admin123` in your case`).
 
-4. **Select the appropriate database**:
-   ```sql
-   use service_conf_bck;
-   ```
-
-5. **Source the SQL script**:
+4. **Source the SQL script**:
    ```sql
    source backup_configs.sql;
    ```
-
+5. **Select the appropriate database**:
+   ```sql
+   use service_conf_bck;
+   select type_name  from configs_prior_patch;
+   select * from configs_prior_patch limit 1;
+   ```
 6. **Exit the MySQL client**:
    ```sql
    exit;
