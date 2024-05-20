@@ -25,7 +25,7 @@ SSH_SETUP_SCRIPT_URL="http://10.90.9.51/one_click_scripts/passwordless-ssh/setup
 #ANSIBLE_PLAYBOOK_URL="http://path_to_your_ansible_playbook/ambari_upgrade.yml"
 WORKDIR="ambari_upgrade"
 INVENTORY_FILE="hosts.ini"
-MPACKS=("ambari-impala-mpack" "httpfs-ambari-mpack" "hue-ambari.mpack" "nifi-ambari-mpack" "spark3-ambari-3.2.2.mpack" ""spark3-ambari-3.2.2-3.2.2.0-1.mpack"") 
+MPACKS=("ambari-impala-mpack" "httpfs-ambari-mpack" "hue-ambari.mpack" "nifi-ambari-mpack" "spark3-ambari-3.2.2.mpack" "spark3-ambari-3.2.2-3.2.2.0-1.mpack") 
 
 # Create a directory for the upgrade process
 mkdir -p $WORKDIR
