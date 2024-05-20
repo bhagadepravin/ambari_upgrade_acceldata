@@ -7,7 +7,7 @@
     odp_version: "3.2.3.0-2"
     ambari_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/Ambari-2.7.8.0-1/"
     odp_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/3.2.3.0-2/"
-    backup_dir: "/tmp/backup"
+    backup_dir: "/etc/ambari-server/conf_backup"
     databases: ["ambari", "hive", "ranger", "rangerkms", "oozie"]
     ambari_server_node: "localhost"
     openjdk_path: "/usr/lib/jvm/java-1.8.0-openjdk"
@@ -46,10 +46,26 @@
         key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
       delegate_to: "{{ inventory_hostname }}"
 
+    - name: Stop Ambari server on the server node
+      systemd:
+        name: ambari-server
+        state: stopped
+      when: inventory_hostname == ambari_server_node
+
+    - name: Stop Ambari agent on all nodes
+      systemd:
+        name: ambari-agent
+        state: stopped
+
+    - name: Stop all Ambari-managed services
+      shell: /usr/sbin/ambari-server stop
+      when: inventory_hostname == ambari_server_node
+
     - name: Create backup directory for Ambari configuration
       file:
         path: "{{ backup_dir }}"
         state: directory
+      when: inventory_hostname == ambari_server_node
 
     - name: Backup Ambari server configuration
       copy:
@@ -57,18 +73,7 @@
         dest: "{{ backup_dir }}"
         remote_src: yes
         mode: preserve
-
-    - name: Create backup directory for Ambari configuration
-      file:
-        path: "{{ backup_dir }}"
-        state: directory
-
-    - name: Backup Ambari server configuration
-      copy:
-        src: /etc/ambari-server/conf/
-        dest: "{{ backup_dir }}"
-        remote_src: yes
-        mode: preserve
+      when: inventory_hostname == ambari_server_node
 
     - name: Backup Ambari databases
       command: "mysqldump {{ item }} > {{ backup_dir }}/{{ item }}_backup.sql"
@@ -90,17 +95,6 @@
       with_items: "{{ backup_files.results }}"
 
   tasks:
-    - name: Stop Ambari server on the server node
-      systemd:
-        name: ambari-server
-        state: stopped
-      when: inventory_hostname == ambari_server_node
-
-    - name: Stop Ambari agent on all nodes
-      systemd:
-        name: ambari-agent
-        state: stopped
-
     - name: Erase Ambari server and agent
       yum:
         name:
@@ -165,20 +159,54 @@
       when: inventory_hostname == ambari_server_node
 
     - name: Upgrade Ambari server
-      shell: /usr/sbin/ambari-server upgrade -s
+      shell: /usr/sbin/ambari-server upgrade
       when: inventory_hostname == ambari_server_node
-      notify: Restart ambari-server
+      notify: Wait for Ambari Server to start listening on port 8080
 
-    - name: Start Ambari server on the server node
-      systemd:
+    - name: Restart ambari-server
+      service:
         name: ambari-server
-        state: started
+        state: restarted
+      when: inventory_hostname == ambari_server_node
+      notify: Wait for Ambari Server to start listening on port 8080
+
+    - name: Wait for Ambari Server to start listening on port 8080
+      wait_for:
+        port: 8080
+        host: 0.0.0.0
+        delay: 1
       when: inventory_hostname == ambari_server_node
 
-    - name: Start Ambari agent on all nodes
-      systemd:
+    - name: Set the Ambari Server in the agent configuration
+      lineinfile:
+        path: /etc/ambari-agent/conf/ambari-agent.ini
+        regexp: "^hostname="
+        line: "hostname={{ hostvars[groups['ambari_server_node']|first]['ansible_fqdn'] }}"
+        state: present
+      notify: Restart ambari-agent
+
+    - name: Configure the Ambari Agents to use TLS 1.2
+      ini_file:
+        path: /etc/ambari-agent/conf/ambari-agent.ini
+        create: no
+        section: "security"
+        option: "force_https_protocol"
+        value: "PROTOCOL_TLSv1_2"
+        state: present
+      notify: Restart ambari-agent
+
+    - meta: flush_handlers
+
+    - name: Make sure the ambari-agent service is started
+      service:
         name: ambari-agent
         state: started
+
+    - name: Make sure the ambari-agent service is enabled
+      service:
+        name: ambari-agent
+        enabled: yes
+      ignore_errors: true
 
   handlers:
     - name: Restart Ambari server
@@ -187,11 +215,10 @@
         state: restarted
       when: inventory_hostname == ambari_server_node
 
-    - name: Start Ambari agent on all nodes
+    - name: Restart ambari-agent
       systemd:
         name: ambari-agent
-        state: started
-      when: inventory_hostname != ambari_server_node
+        state: restarted
 
   post_tasks:
     - name: Verify Ambari server status
