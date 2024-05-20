@@ -52,7 +52,7 @@ CURRENT_HOSTNAME=$(hostname)
 
 # Create Ansible inventory file
 echo "[ambari_server_node]" > $INVENTORY_FILE
-echo "$CURRENT_HOSTNAME ansible_host=$(hostname -I | awk '{print $1}') ansible_user=root ansible_password=Caps@Lock" >> $INVENTORY_FILE
+echo "$CURRENT_HOSTNAME ansible_host=$(hostname | awk '{print $1}') ansible_user=root ansible_password=Caps@Lock" >> $INVENTORY_FILE
 
 echo "[ambari_agents]" >> $INVENTORY_FILE
 while read -r HOST; do
