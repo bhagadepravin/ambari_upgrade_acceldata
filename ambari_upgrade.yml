@@ -225,6 +225,12 @@
         remote_src: yes
       when: inventory_hostname == ambari_server_node
 
+    - name: Stop Ambari server on the server node
+      systemd:
+        name: ambari-server
+        state: stopped
+      when: inventory_hostname == ambari_server_node
+      
     - name: Upgrade Ambari server
       shell: /usr/sbin/ambari-server upgrade -s
       when: inventory_hostname == ambari_server_node
