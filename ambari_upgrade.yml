@@ -3,19 +3,22 @@
   hosts: all
   become: yes
   vars:
-    ambari_version: "2.7.8.0-1"
+    ambari_version: "2.7.6.0-1"
     odp_version: "3.2.3.0-2"
     ambari_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/Ambari-2.7.8.0-1/"
     odp_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/3.2.3.0-2/"
     backup_dir: "/etc/ambari-server/conf_backup"
     databases: ["ambari", "hive", "ranger", "rangerkms", "oozie"]
-    ambari_server_node: "localhost"
     openjdk_path: "/usr/lib/jvm/java-1.8.0-openjdk"
     java: "openjdk"
     kdc_admin_user: "admin/admin"
     kdc_admin_password: "Acceldata@01"
 
   pre_tasks:
+    - name: Retrieve Ambari server node from inventory
+      set_fact:
+        ambari_server_node: "{{ groups['ambari_server'][0] }}"
+
     - name: Install jq
       yum:
         name: jq
@@ -29,11 +32,13 @@
       when: inventory_hostname == ambari_server_node
     
     - name: Display current Ambari version
+      ignore_errors: false
       debug:
         msg: "Ambari version output: {{ ambari_version_output.stdout_lines }}"
       when: inventory_hostname == ambari_server_node
     
     - name: Verify Ambari version
+      ignore_errors: true
       fail:
         msg: "Ambari is already on version {{ ambari_version }}"
       when: ambari_version_output is defined
@@ -41,14 +46,11 @@
             and ambari_version_output.stdout_lines | length > 0
             and ambari_version_output.stdout_lines[0] == ambari_version
             and inventory_hostname == ambari_server_node
-
-    - name: End play if Ambari version is already the desired version
+      register: verify_ambari_version_result
+    
+    - name: Exit playbook if Ambari version is already correct
       meta: end_play
-      when: ambari_version_output is defined
-            and ambari_version_output.stdout_lines is defined
-            and ambari_version_output.stdout_lines | length > 0
-            and ambari_version_output.stdout_lines[0] == ambari_version
-            and inventory_hostname == ambari_server_node
+      when: verify_ambari_version_result.failed
 
     - name: Ensure passwordless SSH is set up
       authorized_key:
