@@ -24,41 +24,25 @@
         name: jq
         state: present
 
-    - name: Check current Ambari version
-      command: ambari-server --version
-      register: ambari_version_output
-      changed_when: false
-      ignore_errors: true
-      when: inventory_hostname == ambari_server_node
-    
-    - name: Display current Ambari version
-      ignore_errors: false
-      debug:
-        msg: "Ambari version output: {{ ambari_version_output.stdout_lines }}"
-      when: inventory_hostname == ambari_server_node
-    
     - name: Verify Ambari version
-      ignore_errors: true
-      fail:
-        msg: "Ambari is already on version {{ ambari_version }}"
-      when: ambari_version_output is defined
-            and ambari_version_output.stdout_lines is defined
-            and ambari_version_output.stdout_lines | length > 0
-            and ambari_version_output.stdout_lines[0] == ambari_version
-            and inventory_hostname == ambari_server_node
+      command: ambari-server --version
       register: verify_ambari_version_result
+      ignore_errors: true
+      when: inventory_hostname == ambari_server_node
+ 
+    - name: Display current Ambari version
+      debug:
+        msg: "Ambari version output: {{ verify_ambari_version_result.stdout_lines }}"
+      when: inventory_hostname == ambari_server_node
     
-    - name: Exit playbook if Ambari version is already correct
-      meta: end_play
-      when: verify_ambari_version_result.failed
-
-    - name: Ensure passwordless SSH is set up
-      authorized_key:
-        user: "{{ ansible_user }}"
-        state: present
-        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
-      delegate_to: "{{ inventory_hostname }}"
-
+    - name: Exit playbook if Ambari version is same, updatew ambari_version.
+      fail:
+        msg: "Ambari and ODP upgrade failed."
+      when: verify_ambari_version_result.stdout_lines is defined 
+            and verify_ambari_version_result.stdout_lines | length > 0 
+            and verify_ambari_version_result.stdout_lines[0] == ambari_version
+            and inventory_hostname == ambari_server_node
+    
     - name: Stop Ambari server on the server node
       systemd:
         name: ambari-server
