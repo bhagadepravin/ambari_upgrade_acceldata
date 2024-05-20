@@ -1,31 +1,20 @@
 #!/bin/bash
 
-# Function to display a message and prompt for user input
-prompt_user() {
-    local message="$1"
-    local options="$2"
-    local user_input
-    echo "$message"
-    read -p "($options) " user_input
-    echo "$user_input"
-}
+# Display the prompt for Spark3 service installation
+read -p "Do you have Spark3 service installed in Ambari? (yes/no) " spark3_installed
 
-# Display the question about Spark3 service installation
-echo "Do you have Spark3 service installed in Ambari?"
-
-# Get user input
-spark3_installed=$(prompt_user "" "yes/no")
-
-# If Spark3 service is installed, display the second prompt message
+# Check if Spark3 service is installed
 if [[ "$spark3_installed" == "yes" ]]; then
-    backup_executed=$(prompt_user "Did you execute generate_sql_backup_restore.sh script?" "yes/no")
+    # Prompt the user for executing the backup script
+    read -p "Did you execute generate_sql_backup_restore.sh script? (yes/no) " backup_executed
+    # If the backup script is not executed, exit
     if [[ "$backup_executed" == "no" ]]; then
         echo "Please execute the generate_sql_backup_restore.sh script and then rerun this script."
         exit 1
     fi
 fi
 
-# Display a message indicating the script will continue
+# Continue with the Ambari upgrade process
 echo "Continuing with the Ambari upgrade process..."
 
 # Variables
@@ -33,7 +22,7 @@ AMBARI_API_USER="admin"
 AMBARI_API_PASS="admin"
 AMBARI_API_URL="http://localhost:8080/api/v1/hosts"
 SSH_SETUP_SCRIPT_URL="http://10.90.9.51/one_click_scripts/passwordless-ssh/setup_ssh_passwordless.sh"
-ANSIBLE_PLAYBOOK_URL="http://path_to_your_ansible_playbook/ambari_upgrade.yml"
+#ANSIBLE_PLAYBOOK_URL="http://path_to_your_ansible_playbook/ambari_upgrade.yml"
 WORKDIR="ambari_upgrade"
 INVENTORY_FILE="hosts.ini"
 MPACKS=("ambari-impala-mpack" "httpfs-ambari-mpack" "hue-ambari.mpack" "nifi-ambari-mpack" "spark3-ambari-3.2.2.mpack" ""spark3-ambari-3.2.2-3.2.2.0-1.mpack"") 
@@ -89,10 +78,13 @@ done < hostcluster.txt
 #ambari-server restart
 
 # Download the Ansible playbook
-wget -N $ANSIBLE_PLAYBOOK_URL -O ambari_upgrade.yml
+#wget -N $ANSIBLE_PLAYBOOK_URL -O ambari_upgrade.yml
+
+#get the Ansible playbook
+#cp ../ambari_upgrade.yml $WORKDIR/
 
 # Run the Ansible playbook
-ansible-playbook -i $INVENTORY_FILE ambari_upgrade.yml
+ansible-playbook -i $INVENTORY_FILE ../ambari_upgrade.yml
 
 # Check the status
 if [ $? -eq 0 ]; then
