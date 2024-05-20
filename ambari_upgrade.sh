@@ -29,7 +29,6 @@ fi
 # Continue with the script execution
 echo "Continuing with the Ambari upgrade process..."
 
-
 # Variables
 AMBARI_API_USER="admin"
 AMBARI_API_PASS="admin"
