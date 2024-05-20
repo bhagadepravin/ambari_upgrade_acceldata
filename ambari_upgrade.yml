@@ -184,7 +184,6 @@
       yum:
         name:
           - ambari-server
-          - ambari-agent
         state: present
       when: inventory_hostname == ambari_server_node
 
@@ -192,7 +191,6 @@
       yum:
         name: ambari-agent
         state: present
-      when: inventory_hostname != ambari_server_node
 
     - name: Restore Ambari configuration files
       copy:
@@ -209,7 +207,7 @@
       when: inventory_hostname == ambari_server_node
 
     - name: Upgrade Ambari server
-      shell: /usr/sbin/ambari-server upgrade
+      shell: /usr/sbin/ambari-server upgrade -s
       when: inventory_hostname == ambari_server_node
       notify: Wait for Ambari Server to start listening on port 8080
 
