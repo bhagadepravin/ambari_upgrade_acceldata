@@ -250,22 +250,10 @@
         delay: 1
       when: inventory_hostname == ambari_server_node
 
-    - name: Set the Ambari Server in the agent configuration
-      lineinfile:
-        path: /etc/ambari-agent/conf/ambari-agent.ini
-        regexp: "^hostname="
-        line: "hostname={{ hostvars[groups['ambari_server_node']|first]['ansible_fqdn'] }}"
-        state: present
-      notify: Restart ambari-agent
-      when: inventory_hostname in groups['ambari_agents']
-      
-    - name: Configure the Ambari Agents to use TLS 1.2
-      ini_file:
-        path: /etc/ambari-agent/conf/ambari-agent.ini
-        create: no
-        section: "security"
-        option: "force"
-        value: "true"
+    - name: Restart ambari-agent
+      service:
+        name: ambari-agent
+        state: restarted
       when: inventory_hostname in groups['ambari_agents']
       
   handlers:
