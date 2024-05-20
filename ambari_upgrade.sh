@@ -14,8 +14,14 @@ MPACKS=("ambari-impala-mpack" "httpfs-ambari-mpack" "hue-ambari.mpack" "nifi-amb
 mkdir -p $WORKDIR
 cd $WORKDIR
 
-# Install Ansible
-sudo yum install -y ansible
+# Check if Ansible is installed
+if ! command -v ansible &> /dev/null
+then
+    echo "Ansible is not installed. Installing now..."
+    sudo yum install -y ansible
+else
+    echo "Ansible is already installed."
+fi
 
 # Download and execute the passwordless SSH setup script
 wget -N $SSH_SETUP_SCRIPT_URL -O setup_ssh_passwordless.sh
@@ -44,15 +50,15 @@ while read -r HOST; do
 done < hostcluster.txt
 
 # Check and uninstall specified mpacks
-for MPACK in "${MPACKS[@]}"; do
-  if grep -qw $MPACK /var/lib/ambari-server/resources/mpacks/*/mpack.json; then
-    echo "Uninstalling mpack: $MPACK"
-    ambari-server uninstall-mpack --mpack-name=$MPACK
-  fi
-done
+#for MPACK in "${MPACKS[@]}"; do
+#  if grep -qw $MPACK /var/lib/ambari-server/resources/mpacks/*/mpack.json; then
+#    echo "Uninstalling mpack: $MPACK"
+#    ambari-server uninstall-mpack --mpack-name=$MPACK
+#  fi
+#done
 
 # Restart Ambari server to apply changes
-ambari-server restart
+#ambari-server restart
 
 # Download the Ansible playbook
 wget -N $ANSIBLE_PLAYBOOK_URL -O ambari_upgrade.yml
