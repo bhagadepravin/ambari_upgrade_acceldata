@@ -22,24 +22,33 @@
         state: present
 
     - name: Check current Ambari version
-      shell: ambari-server --version
+      command: ambari-server --version
       register: ambari_version_output
       changed_when: false
+      ignore_errors: true
       when: inventory_hostname == ambari_server_node
-
+    
     - name: Display current Ambari version
       debug:
-        msg: "Current Ambari version is {{ ambari_version_output.stdout }}"
+        msg: "Ambari version output: {{ ambari_version_output.stdout_lines }}"
       when: inventory_hostname == ambari_server_node
-
+    
     - name: Verify Ambari version
       fail:
         msg: "Ambari is already on version {{ ambari_version }}"
-      when: ambari_version_output.stdout == ambari_version and inventory_hostname == ambari_server_node
+      when: ambari_version_output is defined
+            and ambari_version_output.stdout_lines is defined
+            and ambari_version_output.stdout_lines | length > 0
+            and ambari_version_output.stdout_lines[0] == ambari_version
+            and inventory_hostname == ambari_server_node
 
     - name: End play if Ambari version is already the desired version
       meta: end_play
-      when: ambari_version_output.stdout == ambari_version and inventory_hostname == ambari_server_node
+      when: ambari_version_output is defined
+            and ambari_version_output.stdout_lines is defined
+            and ambari_version_output.stdout_lines | length > 0
+            and ambari_version_output.stdout_lines[0] == ambari_version
+            and inventory_hostname == ambari_server_node
 
     - name: Ensure passwordless SSH is set up
       authorized_key:
@@ -58,10 +67,6 @@
       systemd:
         name: ambari-agent
         state: stopped
-
-    - name: Stop all Ambari-managed services
-      shell: /usr/sbin/ambari-server stop
-      when: inventory_hostname == ambari_server_node
 
     - name: Create backup directory for Ambari configuration
       file:

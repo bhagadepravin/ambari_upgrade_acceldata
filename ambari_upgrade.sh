@@ -21,8 +21,6 @@ echo "Continuing with the Ambari upgrade process..."
 AMBARI_API_USER="admin"
 AMBARI_API_PASS="admin"
 AMBARI_API_URL="http://localhost:8080/api/v1/hosts"
-SSH_SETUP_SCRIPT_URL="http://10.90.9.51/one_click_scripts/passwordless-ssh/setup_ssh_passwordless.sh"
-#ANSIBLE_PLAYBOOK_URL="http://path_to_your_ansible_playbook/ambari_upgrade.yml"
 WORKDIR="ambari_upgrade"
 INVENTORY_FILE="hosts.ini"
 MPACKS=("ambari-impala-mpack" "httpfs-ambari-mpack" "hue-ambari.mpack" "nifi-ambari-mpack" "spark3-ambari-3.2.2.mpack" "spark3-ambari-3.2.2-3.2.2.0-1.mpack") 
@@ -40,11 +38,6 @@ else
     echo "Ansible is already installed."
 fi
 
-# Download and execute the passwordless SSH setup script
-wget -N $SSH_SETUP_SCRIPT_URL -O setup_ssh_passwordless.sh
-chmod +x setup_ssh_passwordless.sh
-./setup_ssh_passwordless.sh
-
 # Retrieve the list of hosts from Ambari server
 curl -s -u $AMBARI_API_USER:$AMBARI_API_PASS $AMBARI_API_URL | grep host_name | sed -n 's/.*"host_name" : "\([^\"]*\)".*/\1/p' > hostcluster.txt
 
@@ -59,11 +52,11 @@ CURRENT_HOSTNAME=$(hostname)
 
 # Create Ansible inventory file
 echo "[ambari_server]" > $INVENTORY_FILE
-echo "$CURRENT_HOSTNAME ansible_host=$(hostname -I | awk '{print $1}')" >> $INVENTORY_FILE
+echo "$CURRENT_HOSTNAME ansible_host=$(hostname -I | awk '{print $1}') ansible_user=root ansible_password=Caps@Lock" >> $INVENTORY_FILE
 
 echo "[ambari_agents]" >> $INVENTORY_FILE
 while read -r HOST; do
-  echo "$HOST ansible_host=$(getent hosts $HOST | awk '{ print $1 }')" >> $INVENTORY_FILE
+  echo "$HOST ansible_host=$(getent hosts $HOST | awk '{ print $1 }') ansible_user=root ansible_password=Caps@Lock" >> $INVENTORY_FILE
 done < hostcluster.txt
 
 # Check and uninstall specified mpacks
@@ -73,15 +66,6 @@ done < hostcluster.txt
 #    ambari-server uninstall-mpack --mpack-name=$MPACK
 #  fi
 #done
-
-# Restart Ambari server to apply changes
-#ambari-server restart
-
-# Download the Ansible playbook
-#wget -N $ANSIBLE_PLAYBOOK_URL -O ambari_upgrade.yml
-
-#get the Ansible playbook
-#cp ../ambari_upgrade.yml $WORKDIR/
 
 # Run the Ansible playbook
 ansible-playbook -i $INVENTORY_FILE ../ambari_upgrade.yml
