@@ -1,7 +1,4 @@
 #!/bin/bash
-
-#!/bin/bash
-
 # Check if Ambari server is running
 ambari_status=$(ambari-server status | grep "Ambari Server running")
 
