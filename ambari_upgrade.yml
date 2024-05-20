@@ -35,7 +35,7 @@
         msg: "Ambari version output: {{ verify_ambari_version_result.stdout_lines }}"
       when: inventory_hostname == ambari_server_node
     
-    - name: Exit playbook if Ambari version is same, updatew ambari_version.
+    - name: Exit playbook if Ambari version is same, update ambari_version.
       fail:
         msg: "Ambari and ODP upgrade failed."
       when: verify_ambari_version_result.stdout_lines is defined 
@@ -74,6 +74,15 @@
       ignore_errors: true
       when: inventory_hostname == ambari_server_node
 
+    - name: Backup Ambari databases
+      mysql_db:
+        state: dump
+        name: "{{ item }}"
+        target: "{{ backup_dir }}/{{ item }}_backup.sql"
+      with_items: "{{ databases }}"
+      ignore_errors: true
+      when: inventory_hostname == ambari_server_node
+      
     - name: Verify database backups
       stat:
         path: "{{ backup_dir }}/{{ item }}_backup.sql"
