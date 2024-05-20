@@ -18,7 +18,15 @@
       ambari_db_username: 'ambari'
       ambari_db_password: 'bigdata'
 
+    kdc_admin_user: "admin/admin"
+    kdc_admin_password: "Acceldata@01"
+
   pre_tasks:
+    - name: Install jq
+      yum:
+        name: jq
+        state: present
+
     - name: Check current Ambari version
       shell: ambari-server --version
       register: ambari_version_output
@@ -93,6 +101,41 @@
         msg: "Database backup for {{ item.item }} failed!"
       when: item.stat.exists == false and inventory_hostname == ambari_server_node
       with_items: "{{ backup_files.results }}"
+
+    - name: Get Ambari cluster name
+      shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters | jq -r '.items[0].Clusters.cluster_name'"
+      register: cluster_name
+      when: inventory_hostname == ambari_server_node
+
+    - name: Set cluster name fact
+      set_fact:
+        cluster_name: "{{ cluster_name.stdout }}"
+      when: inventory_hostname == ambari_server_node
+
+    - name: Check if Kerberos is enabled
+      command: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/KERBEROS"
+      register: kerberos_status
+      ignore_errors: true
+      when: inventory_hostname == ambari_server_node
+
+    - name: Set Kerberos credentials if Kerberos is enabled
+      lineinfile:
+        path: /etc/ambari-server/conf/ambari.properties
+        line: |
+          kdc.admin.credential={{ kdc_admin_user }}
+          kdc.admin.password={{ kdc_admin_password }}
+        create: yes
+      when: kerberos_status.rc == 0 and inventory_hostname == ambari_server_node
+
+    - name: Stop SPARK3 service
+      shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X PUT -d '{\"ServiceInfo\": {\"state\" : \"INSTALLED\"}}' http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
+      ignore_errors: true
+      when: inventory_hostname == ambari_server_node
+
+    - name: Delete SPARK3 service
+      shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X DELETE http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
+      ignore_errors: true
+      when: inventory_hostname == ambari_server_node
 
   tasks:
     - name: Erase Ambari server and agent
@@ -190,44 +233,17 @@
         path: /etc/ambari-agent/conf/ambari-agent.ini
         create: no
         section: "security"
-        option: "force_https_protocol"
-        value: "PROTOCOL_TLSv1_2"
-        state: present
-      notify: Restart ambari-agent
-
-    - meta: flush_handlers
-
-    - name: Make sure the ambari-agent service is started
-      service:
-        name: ambari-agent
-        state: started
-
-    - name: Make sure the ambari-agent service is enabled
-      service:
-        name: ambari-agent
-        enabled: yes
-      ignore_errors: true
+        option: "force"
+        value: "true"
 
   handlers:
-    - name: Restart Ambari server
-      systemd:
-        name: ambari-server
-        state: restarted
-      when: inventory_hostname == ambari_server_node
+    - name: Wait for Ambari Server to start listening on port 8080
+      wait_for:
+        port: 8080
+        host: 0.0.0.0
+        delay: 10
 
     - name: Restart ambari-agent
-      systemd:
+      service:
         name: ambari-agent
         state: restarted
-
-  post_tasks:
-    - name: Verify Ambari server status
-      systemd:
-        name: ambari-server
-        state: started
-      when: inventory_hostname == ambari_server_node
-
-    - name: Verify Ambari agent status on all nodes
-      systemd:
-        name: ambari-agent
-        state: started
