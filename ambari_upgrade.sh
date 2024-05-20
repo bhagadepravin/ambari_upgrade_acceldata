@@ -10,14 +10,13 @@ prompt_user() {
     echo "$user_input"
 }
 
-# Display informative popup message
-echo "Welcome to the Ambari Upgrade Script!"
-echo ""
+# Display the question about Spark3 service installation
+echo "Do you have Spark3 service installed in Ambari?"
 
-# Check if Spark3 service is installed
-spark3_installed=$(prompt_user "Do you have Spark3 service installed in Ambari?" "yes/no")
+# Get user input
+spark3_installed=$(prompt_user "" "yes/no")
 
-# If Spark3 service is installed, check if generate_sql_backup_restore.sh script was executed
+# If Spark3 service is installed, display the second prompt message
 if [[ "$spark3_installed" == "yes" ]]; then
     backup_executed=$(prompt_user "Did you execute generate_sql_backup_restore.sh script?" "yes/no")
     if [[ "$backup_executed" == "no" ]]; then
@@ -26,7 +25,7 @@ if [[ "$spark3_installed" == "yes" ]]; then
     fi
 fi
 
-# Continue with the script execution
+# Display a message indicating the script will continue
 echo "Continuing with the Ambari upgrade process..."
 
 # Variables
