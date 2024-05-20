@@ -1,5 +1,35 @@
 #!/bin/bash
 
+# Function to display a message and prompt for user input
+prompt_user() {
+    local message="$1"
+    local options="$2"
+    local user_input
+    echo "$message"
+    read -p "($options) " user_input
+    echo "$user_input"
+}
+
+# Display informative popup message
+echo "Welcome to the Ambari Upgrade Script!"
+echo ""
+
+# Check if Spark3 service is installed
+spark3_installed=$(prompt_user "Do you have Spark3 service installed in Ambari?" "yes/no")
+
+# If Spark3 service is installed, check if generate_sql_backup_restore.sh script was executed
+if [[ "$spark3_installed" == "yes" ]]; then
+    backup_executed=$(prompt_user "Did you execute generate_sql_backup_restore.sh script?" "yes/no")
+    if [[ "$backup_executed" == "no" ]]; then
+        echo "Please execute the generate_sql_backup_restore.sh script and then rerun this script."
+        exit 1
+    fi
+fi
+
+# Continue with the script execution
+echo "Continuing with the Ambari upgrade process..."
+
+
 # Variables
 AMBARI_API_USER="admin"
 AMBARI_API_PASS="admin"
