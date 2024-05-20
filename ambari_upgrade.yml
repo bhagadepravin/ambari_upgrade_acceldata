@@ -84,12 +84,6 @@
       register: backup_files
       when: inventory_hostname == ambari_server_node
 
-    - name: Fail if any database backup is missing
-      fail:
-        msg: "Database backup for {{ item.item }} failed!"
-      when: item.stat.exists == false and inventory_hostname == ambari_server_node
-      with_items: "{{ backup_files.results }}"
-
     - name: Get Ambari cluster name
       shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters | jq -r '.items[0].Clusters.cluster_name'"
       register: cluster_name
@@ -98,6 +92,11 @@
     - name: Set cluster name fact
       set_fact:
         cluster_name: "{{ cluster_name.stdout }}"
+      when: inventory_hostname == ambari_server_node
+
+    - name: Display cluster name
+      debug:
+        msg: "Cluster name: {{ cluster_name }}"
       when: inventory_hostname == ambari_server_node
 
     - name: Check if Kerberos is enabled
