@@ -137,7 +137,7 @@
       notify: Restart ambari-server
       
     - name: Upgrade Ambari server
-      shell: /usr/sbin/ambari-server upgrade
+      shell: /usr/sbin/ambari-server upgrade -s
       when: inventory_hostname == ambari_server_node
       notify: Restart ambari-server
 
