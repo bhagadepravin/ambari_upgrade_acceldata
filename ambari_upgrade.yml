@@ -10,6 +10,7 @@
     backup_dir: "/tmp/backup"
     databases: ["ambari", "hive", "ranger", "rangerkms", "oozie"]
     db_user: "root"
+    db_password: ""
     ambari_server_node: "localhost"
     openjdk_path: "/usr/lib/jvm/java-1.8.0-openjdk"
     java: "openjdk"
@@ -20,6 +21,26 @@
       ambari_db_password: 'bigdata'
 
   pre_tasks:
+    - name: Check current Ambari version
+      shell: ambari-server --version
+      register: ambari_version_output
+      changed_when: false
+      when: inventory_hostname == ambari_server_node
+
+    - name: Display current Ambari version
+      debug:
+        msg: "Current Ambari version is {{ ambari_version_output.stdout }}"
+      when: inventory_hostname == ambari_server_node
+
+    - name: Verify Ambari version
+      fail:
+        msg: "Ambari is already on version {{ ambari_version }}"
+      when: ambari_version_output.stdout == ambari_version and inventory_hostname == ambari_server_node
+
+    - name: End play if Ambari version is already the desired version
+      meta: end_play
+      when: ambari_version_output.stdout == ambari_version and inventory_hostname == ambari_server_node
+
     - name: Ensure passwordless SSH is set up
       authorized_key:
         user: "{{ ansible_user }}"
@@ -44,10 +65,13 @@
         state: directory
 
     - name: Backup Ambari databases
-      command: >
-        mysqldump {{ item }} > {{ backup_dir }}/{{ item }}_backup.sql
+      mysql_db:
+        name: "{{ item }}"
+        state: dump
+        target: "{{ backup_dir }}/{{ item }}_backup.sql"
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
       with_items: "{{ databases }}"
-      become_user: "{{ db_user }}"
 
   tasks:
     - name: Erase Ambari server and agent
@@ -116,7 +140,7 @@
     - name: Run Ambari Server setup
       shell: /usr/sbin/ambari-server setup -s {{ ambari_java_options|default("") }} {{ ambari_database_options|default("") }}
       notify: Restart ambari-server
-
+      
     - name: Upgrade Ambari server
       shell: /usr/sbin/ambari-server upgrade
       when: inventory_hostname == ambari_server_node
@@ -127,13 +151,18 @@
         name: ambari-server
         state: started
       when: inventory_hostname == ambari_server_node
-      notify: Start Ambari agent on all nodes
+
+    - name: Start Ambari agent on all nodes
+      systemd:
+        name: ambari-agent
+        state: started
 
   handlers:
-    - name: Restart ambari-server
+    - name: Restart Ambari server
       systemd:
         name: ambari-server
         state: restarted
+      when: inventory_hostname == ambari_server_node
 
     - name: Start Ambari agent on all nodes
       systemd:
@@ -152,3 +181,4 @@
       systemd:
         name: ambari-agent
         state: started
+
