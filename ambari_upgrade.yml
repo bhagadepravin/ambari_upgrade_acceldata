@@ -255,17 +255,3 @@
         name: ambari-agent
         state: restarted
       when: inventory_hostname in groups['ambari_agents']
-      
-  handlers:
-    - name: Wait for Ambari Server to start listening on port 8080
-      wait_for:
-        port: 8080
-        host: 0.0.0.0
-        delay: 10
-
-    - name: Restart ambari-agent
-      service:
-        name: ambari-agent
-        state: restarted
-      when: inventory_hostname in groups['ambari_agents']
-      
