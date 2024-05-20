@@ -69,12 +69,6 @@
       when: inventory_hostname == ambari_server_node
 
     - name: Backup Ambari databases
-      command: "mysqldump {{ item }} > {{ backup_dir }}/{{ item }}_backup.sql"
-      with_items: "{{ databases }}"
-      ignore_errors: true
-      when: inventory_hostname == ambari_server_node
-
-    - name: Backup Ambari databases
       mysql_db:
         state: dump
         name: "{{ item }}"
