@@ -9,8 +9,6 @@
     odp_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/3.2.3.0-2/"
     backup_dir: "/tmp/backup"
     databases: ["ambari", "hive", "ranger", "rangerkms", "oozie"]
-    db_user: "root"
-    db_password: ""
     ambari_server_node: "localhost"
     openjdk_path: "/usr/lib/jvm/java-1.8.0-openjdk"
     java: "openjdk"
@@ -65,13 +63,10 @@
         state: directory
 
     - name: Backup Ambari databases
-      mysql_db:
-        name: "{{ item }}"
-        state: dump
-        target: "{{ backup_dir }}/{{ item }}_backup.sql"
-        login_user: "{{ db_user }}"
-        login_password: "{{ db_password }}"
+      command: "mysqldump {{ item }} > {{ backup_dir }}/{{ item }}_backup.sql"
       with_items: "{{ databases }}"
+      ignore_errors: true
+      when: inventory_hostname == ambari_server_node
 
   tasks:
     - name: Erase Ambari server and agent
@@ -181,4 +176,3 @@
       systemd:
         name: ambari-agent
         state: started
-
