@@ -293,4 +293,8 @@
       shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X PUT -d '{\"RequestInfo\": {\"context\" :\"Start SPARK3 via REST\"}, \"Body\": {\"ServiceInfo\": {\"state\": \"STARTED\"}}}' http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
       when: spark3_service.stdout | default("") | length > 0 and inventory_hostname == ambari_server_node
 
-      
+  handlers:
+    - name: Restart ambari-server
+      systemd:
+        name: ambari-server
+        state: restarted     
