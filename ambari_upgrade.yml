@@ -101,16 +101,21 @@
         msg: "Cluster name: {{ cluster_name }}"
       when: inventory_hostname in groups['ambari_server']
 
-    - name: Check if Kerberos is enabled
-      command: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/KERBEROS"
+    - name: Check if Kerberos is enabled using curl
+      command: "curl -u admin:admin -X GET http://{{ ambari_server_node }}:8080/api/v1/clusters/{{ cluster_name }}/services/KERBEROS"
       register: kerberos_status
       ignore_errors: true
-      when: inventory_hostname in groups['ambari_server']
+      when: inventory_hostname == ambari_server_node
+
+    - name: Check Kerberos status
+      set_fact:
+        kerberos_enabled: "{{ kerberos_status is succeeded }}"
+      when: inventory_hostname == ambari_server_node
 
     - name: Add KDC credentials to Ambari
       uri:
         method: POST
-        url: "http://{{ ansible_fqdn }}:8080/api/v1/clusters/{{ cluster_name }}/credentials/kdc.admin.credential"
+        url: "http://{{ ambari_server_node }}:8080/api/v1/clusters/{{ cluster_name }}/credentials/kdc.admin.credential"
         url_username: "{{ ambari_admin_user }}"
         force_basic_auth: yes
         url_password: "{{ ambari_admin_password }}"
@@ -122,7 +127,7 @@
         return_content: yes
       register: api_result
       ignore_errors: true
-      when: kerberos_status.rc == 0 and inventory_hostname in groups['ambari_server']
+      when: kerberos_enabled | default(false) and inventory_hostname == ambari_server_node
       
     - name: Check if SPARK3 service is present
       command: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
@@ -261,19 +266,6 @@
       when: inventory_hostname == ambari_server_node
       notify: Wait for Ambari Server to start listening on port 8080
 
-    - name: Wait for Ambari Server to start listening on port 8080
-      wait_for:
-        port: 8080
-        host: 0.0.0.0
-        delay: 1
-      when: inventory_hostname == ambari_server_node
-
-    - name: Restart ambari-agent
-      service:
-        name: ambari-agent
-        state: restarted
-      when: inventory_hostname in groups['ambari_agents']
-
     - name: Install the Spark3 Management Pack
       shell: "echo yes | ambari-server install-mpack --mpack=https://mirror.odp.acceldata.dev/mpacks/ambari-mpacks-spark3-3.2.2.tar.gz"
       ignore_errors: true
@@ -287,32 +279,16 @@
         ln -s /var/lib/ambari-server/resources/mpacks/spark3-ambari-3.2.2.mpack-3.2.2/common-services/SPARK3/3.2.2 /var/lib/ambari-server/resources/stacks/ODP/3.1/services/SPARK3
       ignore_errors: true
       when: spark3_service.stdout | default("") | length > 0 and inventory_hostname == ambari_server_node
-
-    - name: Restart ambari-server
-      service:
-        name: ambari-server
-        state: restarted
-      when: inventory_hostname == ambari_server_node
-      notify: Wait for Ambari Server to start listening on port 8080
-
+      
     - name: Wait for Ambari Server to start listening on port 8080
       wait_for:
         port: 8080
         host: 0.0.0.0
         delay: 1
       when: inventory_hostname == ambari_server_node
-      
-    - name: Add Spark3 service to Ambari
-      shell: |
-        curl -u admin:admin -H "X-Requested-By: ambari" -X POST http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3
-        for node in {{ spark3_nodes.stdout_lines | join(" ") }}; do
-          curl -u admin:admin -H "X-Requested-By: ambari" -X POST http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/hosts/$node/host_components/SPARK3_JOBHISTORYSERVER
-          curl -u admin:admin -H "X-Requested-By: ambari" -X POST http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/hosts/$node/host_components/SPARK3_CLIENT
-        done
-      when: spark3_service.stdout | default("") | length > 0 and inventory_hostname == ambari_server_node
-      ignore_errors: true
-      
-    - name: Start Spark3 service
-      shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X PUT -d '{\"RequestInfo\": {\"context\" :\"Start SPARK3 via REST\"}, \"Body\": {\"ServiceInfo\": {\"state\": \"STARTED\"}}}' http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
-      when: spark3_service.stdout | default("") | length > 0 and inventory_hostname == ambari_server_node
-      ignore_errors: true
+
+    - name: Restart ambari-agent
+      service:
+        name: ambari-agent
+        state: restarted
+      when: inventory_hostname in groups['ambari_agents']
