@@ -13,7 +13,9 @@
     java: "openjdk"
     kdc_admin_user: "admin/admin"
     kdc_admin_password: "Acceldata@01"
-
+    ambari_admin_user: "admin"
+    ambari_admin_password: "admin"
+    
   pre_tasks:
     - name: Retrieve Ambari server node from inventory
       set_fact:
