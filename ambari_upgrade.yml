@@ -292,3 +292,65 @@
         name: ambari-agent
         state: restarted
       when: inventory_hostname in groups['ambari_agents']
+
+- name: Upgrade Ambari and ODP
+  hosts: all
+  become: yes
+  vars:
+    ambari_version: "2.7.8.0-1"
+    odp_version: "3.2.3.0-2"
+    ambari_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/Ambari-2.7.8.0-1/"
+    odp_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/3.2.3.0-2/"
+    backup_dir: "/etc/ambari-server/conf_backup"
+    databases: ["ambari", "hive", "ranger", "rangerkms", "oozie"]
+    openjdk_path: "/usr/lib/jvm/java-1.8.0-openjdk"
+    java: "openjdk"
+    kdc_admin_user: "admin/admin"
+    kdc_admin_password: "Acceldata@01"
+    ambari_admin_user: "admin"
+    ambari_admin_password: "admin"
+    vdf_file_path: "/root/ambari_upgrade_acceldata/odp_3.2.3.0-2_vdf.xml"
+
+  tasks:
+    - name: Check if current host is Ambari server
+      block:
+        - name: Get Ambari server facts
+          setup:
+            filter: "ansible_hostname"
+          register: ambari_server_facts
+
+        - debug:
+            var: ambari_server_facts
+
+        - set_fact:
+            is_ambari_server: "{{ ansible_hostname == ambari_server_facts.ansible_hostname }}"
+
+      when: ansible_hostname in groups['ambari_server']
+
+    - name: Attempt to get an existing VDF for the required version (Ambari >= 2.6)
+      uri:
+        url: "http://{{ ansible_fqdn }}:8080/api/v1/version_definitions?VersionDefinition/release/version={{ odp_version }}"
+        method: GET
+        force_basic_auth: yes
+        user: "{{ ambari_admin_user }}"
+        password: "{{ ambari_admin_password }}"
+        headers: '{"X-Requested-By":"ambari"}'
+        status_code: 200,201,202
+        return_content: yes
+      register: existing_vdf
+      ignore_errors: true
+      when: is_ambari_server | default(false)
+
+    - name: Register the VDF with Ambari (Ambari >= 2.6)
+      uri:
+        url: http://{{ ansible_fqdn }}:8080/api/v1/version_definitions
+        method: POST
+        force_basic_auth: yes
+        user: "{{ ambari_admin_user }}"
+        password: "{{ ambari_admin_password }}"
+        headers: '{"X-Requested-By":"ambari"}'
+        body: " {\"VersionDefinition\":{ \"version_url\":\"file://{{ vdf_file_path }}\"}}"
+        body_format: raw
+        status_code: 200,201,202
+        return_content: no
+      when: (existing_vdf.content|from_yaml)['items'] | length == 0 and is_ambari_server | default(false)
