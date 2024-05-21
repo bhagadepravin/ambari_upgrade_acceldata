@@ -276,10 +276,23 @@
         ln -s /var/lib/ambari-server/resources/mpacks/spark3-ambari-3.2.2.mpack-3.2.2/common-services/SPARK3/3.2.2 /var/lib/ambari-server/resources/stacks/ODP/3.0/services/SPARK3
         rm -rf /var/lib/ambari-server/resources/stacks/ODP/3.1/services/SPARK3
         ln -s /var/lib/ambari-server/resources/mpacks/spark3-ambari-3.2.2.mpack-3.2.2/common-services/SPARK3/3.2.2 /var/lib/ambari-server/resources/stacks/ODP/3.1/services/SPARK3
-      notify: Restart ambari-server
       ignore_errors: true
-      when: inventory_hostname in groups['ambari_server']
+      when: spark3_service.stdout | default("") | length > 0 and inventory_hostname == ambari_server_node
 
+    - name: Restart ambari-server
+      service:
+        name: ambari-server
+        state: restarted
+      when: inventory_hostname == ambari_server_node
+      notify: Wait for Ambari Server to start listening on port 8080
+
+    - name: Wait for Ambari Server to start listening on port 8080
+      wait_for:
+        port: 8080
+        host: 0.0.0.0
+        delay: 1
+      when: inventory_hostname == ambari_server_node
+      
     - name: Add Spark3 service to Ambari
       shell: |
         curl -u admin:admin -H "X-Requested-By: ambari" -X POST http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3
@@ -294,9 +307,3 @@
       shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X PUT -d '{\"RequestInfo\": {\"context\" :\"Start SPARK3 via REST\"}, \"Body\": {\"ServiceInfo\": {\"state\": \"STARTED\"}}}' http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
       when: spark3_service.stdout | default("") | length > 0 and inventory_hostname == ambari_server_node
       ignore_errors: true
-      
-  handlers:
-    - name: Restart ambari-server
-      systemd:
-        name: ambari-server
-        state: restarted     
