@@ -97,24 +97,31 @@
     - name: Display cluster name
       debug:
         msg: "Cluster name: {{ cluster_name }}"
-      when: inventory_hostname == ambari_server_node
+      when: inventory_hostname in groups['ambari_server']
 
     - name: Check if Kerberos is enabled
       command: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/KERBEROS"
       register: kerberos_status
       ignore_errors: true
-      when: inventory_hostname == ambari_server_node
+      when: inventory_hostname in groups['ambari_server']
 
-    - name: Set Kerberos credentials if Kerberos is enabled
-      lineinfile:
-        path: /etc/ambari-server/conf/ambari.properties
-        line: |
-          kdc.admin.credential={{ kdc_admin_user }}
-          kdc.admin.password={{ kdc_admin_password }}
-        create: yes
-      when: kerberos_status.rc == 0 and inventory_hostname == ambari_server_node
-
-
+    - name: Add KDC credentials to Ambari
+      uri:
+        method: POST
+        url: "http://{{ ansible_fqdn }}:8080/api/v1/clusters/{{ cluster_name }}/credentials/kdc.admin.credential"
+        url_username: "{{ ambari_admin_user }}"
+        force_basic_auth: yes
+        url_password: "{{ ambari_admin_password }}"
+        body: "{ \"Credential\" : { \"principal\" : \"{{ kdc_admin_user }}\", \"key\" : \"{{ kdc_admin_password }}\", \"type\" : \"temporary\" } }"
+        body_format: json
+        status_code: 201
+        headers:
+          'X-Requested-By': 'ambari'
+        return_content: yes
+      register: api_result
+      ignore_errors: true
+      when: kerberos_status.rc == 0 and inventory_hostname in groups['ambari_server']
+      
     - name: Check if SPARK3 service is present
       command: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
       register: spark3_service
