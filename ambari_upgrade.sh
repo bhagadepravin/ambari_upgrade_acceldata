@@ -57,7 +57,8 @@ cd $WORKDIR
 if ! command -v ansible &> /dev/null
 then
     echo "Ansible is not installed. Installing now..."
-    sudo yum install -y ansible
+     yum install -y epel-release
+     yum install -y ansible
 else
     echo "Ansible is already installed."
 fi
