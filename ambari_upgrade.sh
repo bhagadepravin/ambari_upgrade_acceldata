@@ -122,6 +122,16 @@ else
     print_green "host_key_checking has been uncommented."
 fi
 
+# Check and set deprecation_warnings in ansible.cfg
+if grep -q "^[#]*deprecation_warnings" /etc/ansible/ansible.cfg; then
+    print_yellow "Setting deprecation_warnings=False in /etc/ansible/ansible.cfg..."
+    sudo sed -i 's/^[#]*deprecation_warnings.*/deprecation_warnings=False/' /etc/ansible/ansible.cfg
+else
+    print_yellow "Adding deprecation_warnings=False to /etc/ansible/ansible.cfg..."
+    sudo sh -c "echo 'deprecation_warnings=False' >> /etc/ansible/ansible.cfg"
+fi
+print_green "deprecation_warnings is set to False in /etc/ansible/ansible.cfg"
+
 # Retrieve the list of hosts from Ambari server
 print_yellow "Retrieving the list of hosts from Ambari server..."
 curl -s -u $AMBARI_API_USER:$AMBARI_API_PASS $AMBARI_API_URL | grep host_name | sed -n 's/.*"host_name" : "\([^\"]*\)".*/\1/p' > hostcluster.txt
