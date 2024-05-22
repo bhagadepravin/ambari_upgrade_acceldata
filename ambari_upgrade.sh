@@ -1,27 +1,39 @@
 #!/bin/bash
+
+# Color codes
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Function to print messages in color
+print_green() { echo -e "${GREEN}$1${NC}"; }
+print_yellow() { echo -e "${YELLOW}$1${NC}"; }
+print_red() { echo -e "${RED}$1${NC}"; }
+
 # Check if Ambari server is running
 ambari_status=$(ambari-server status | grep "Ambari Server running")
 
 if [ -z "$ambari_status" ]; then
     # Ambari server is not running
-    echo "Ambari server is not running."
+    print_red "Ambari server is not running."
     read -p "Do you want to start the Ambari server? (yes/no) " start_ambari
     if [ "$start_ambari" = "yes" ]; then
         # Start the Ambari server
         ambari-server start
         if [ $? -eq 0 ]; then
-            echo "Ambari server started successfully."
+            print_green "Ambari server started successfully."
         else
-            echo "Failed to start Ambari server. Exiting."
+            print_red "Failed to start Ambari server. Exiting."
             exit 1
         fi
     else
-        echo "Exiting without starting Ambari server."
+        print_yellow "Exiting without starting Ambari server."
         exit 1
     fi
 else
     # Ambari server is already running
-    echo "Ambari server is already running."
+    print_green "Ambari server is already running."
 fi
 
 # Display the prompt for Spark3 service installation
@@ -33,13 +45,13 @@ if [[ "$spark3_installed" == "yes" ]]; then
     read -p "Did you execute generate_sql_backup_restore.sh script? (yes/no) " backup_executed
     # If the backup script is not executed, exit
     if [[ "$backup_executed" == "no" ]]; then
-        echo "Please execute the generate_sql_backup_restore.sh script and then rerun this script."
+        print_red "Please execute the generate_sql_backup_restore.sh script and then rerun this script."
         exit 1
     fi
 fi
 
 # Continue with the Ambari upgrade process
-echo "Continuing with the Ambari upgrade process..."
+print_green "Continuing with the Ambari upgrade process..."
 
 # Variables
 AMBARI_API_USER="admin"
@@ -55,49 +67,68 @@ cd $WORKDIR
 
 # Function to install Ansible on RHEL 8
 install_ansible_rhel8() {
-    echo "Enabling Ansible repository for RHEL 8..."
+    print_yellow "Enabling Ansible repository for RHEL 8..."
     sudo subscription-manager repos --enable ansible-2.9-for-rhel-8-x86_64-rpms
-    echo "Installing Ansible..."
+    print_yellow "Installing Ansible..."
     sudo yum install -y ansible
 }
 
-# Function to install Ansible on CentOS 7
+# Function to install Ansible on CentOS 7 and create inventory file
 install_ansible_centos7() {
-    echo "Installing EPEL release and Ansible for CentOS 7..."
+    print_yellow "Installing EPEL release and Ansible for CentOS 7..."
     sudo yum install -y epel-release
     sudo yum install -y ansible
+    
+    # Create Ansible inventory file
+    print_yellow "Creating Ansible inventory file..."
+    echo "[ambari_server]" > $INVENTORY_FILE
+    echo "$CURRENT_HOSTNAME ansible_host=$(hostname -I | awk '{print $1}') ansible_user=root ansible_password=Caps@Lock" >> $INVENTORY_FILE
+    
+    echo "[ambari_agents]" >> $INVENTORY_FILE
+    while read -r HOST; do
+        echo "$HOST ansible_host=$(getent hosts $HOST | awk '{ print $1 }') ansible_user=root ansible_password=Caps@Lock" >> $INVENTORY_FILE
+    done < hostcluster.txt
 }
 
 # Check if Ansible is installed
 if ! command -v ansible &> /dev/null
 then
-    echo "Ansible is not installed. Installing now..."
+    print_yellow "Ansible is not installed. Installing now..."
     
     # Determine the OS version and install Ansible accordingly
     if grep -q "Red Hat Enterprise Linux" /etc/redhat-release; then
         if grep -q "release 8" /etc/redhat-release; then
             install_ansible_rhel8
+            ansible_password="R#el@1+1=2"
         else
-            echo "Unsupported Red Hat version. Please install Ansible manually."
+            print_red "Unsupported Red Hat version. Please install Ansible manually."
             exit 1
         fi
     elif grep -q "CentOS Linux release 7" /etc/redhat-release; then
         install_ansible_centos7
+        ansible_password="Caps@Lock"
     else
-        echo "Unsupported OS version. Please install Ansible manually."
+        print_red "Unsupported OS version. Please install Ansible manually."
         exit 1
     fi
 else
-    echo "Ansible is already installed."
+    print_green "Ansible is already installed."
+    if grep -q "Red Hat Enterprise Linux" /etc/redhat-release; then
+        if grep -q "release 8" /etc/redhat-release; then
+            ansible_password="R#el@1+1=2"
+        fi
+    elif grep -q "CentOS Linux release 7" /etc/redhat-release; then
+        ansible_password="Caps@Lock"
+    fi
 fi
 
-
 # Retrieve the list of hosts from Ambari server
+print_yellow "Retrieving the list of hosts from Ambari server..."
 curl -s -u $AMBARI_API_USER:$AMBARI_API_PASS $AMBARI_API_URL | grep host_name | sed -n 's/.*"host_name" : "\([^\"]*\)".*/\1/p' > hostcluster.txt
 
 # Verify hostcluster.txt is not empty
 if [ ! -s hostcluster.txt ]; then
-  echo "Error: No hosts found in Ambari server."
+  print_red "Error: No hosts found in Ambari server."
   exit 1
 fi
 
@@ -105,12 +136,13 @@ fi
 CURRENT_HOSTNAME=$(hostname)
 
 # Create Ansible inventory file
+print_yellow "Creating Ansible inventory file..."
 echo "[ambari_server]" > $INVENTORY_FILE
-echo "$CURRENT_HOSTNAME ansible_host=$(hostname | awk '{print $1}') ansible_user=root ansible_password=Caps@Lock" >> $INVENTORY_FILE
+echo "$CURRENT_HOSTNAME ansible_host=$(hostname -I | awk '{print $1}') ansible_user=root ansible_password=$ansible_password" >> $INVENTORY_FILE
 
 echo "[ambari_agents]" >> $INVENTORY_FILE
 while read -r HOST; do
-  echo "$HOST ansible_host=$(getent hosts $HOST | awk '{ print $2 }') ansible_user=root ansible_password=Caps@Lock" >> $INVENTORY_FILE
+  echo "$HOST ansible_host=$(getent hosts $HOST | awk '{ print $1 }') ansible_user=root ansible_password=$ansible_password" >> $INVENTORY_FILE
 done < hostcluster.txt
 
 # Check and uninstall specified mpacks
@@ -122,12 +154,13 @@ done < hostcluster.txt
 #done
 
 # Run the Ansible playbook
+print_yellow "Running the Ansible playbook..."
 ansible-playbook -i $INVENTORY_FILE ../ambari_upgrade.yml
 
 # Check the status
 if [ $? -eq 0 ]; then
-  echo "Ambari and ODP upgrade completed successfully."
+  print_green "Ambari and ODP upgrade completed successfully."
 else
-  echo "Error: Ambari and ODP upgrade failed."
+  print_red "Error: Ambari and ODP upgrade failed."
   exit 1
 fi
