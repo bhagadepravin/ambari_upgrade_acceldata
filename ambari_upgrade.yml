@@ -22,10 +22,16 @@
       set_fact:
         ambari_server_node: "{{ groups['ambari_server'][0] }}"
         
+    - name: Determine the operating system
+      ansible.builtin.setup:
+        gather_subset:
+          - 'distribution'
+          - 'distribution_version'
+
     - name: Set ansible_python_interpreter to Python 3 on RHEL 8
       ansible.builtin.set_fact:
         ansible_python_interpreter: /usr/bin/python3
-      when: ansible_facts['distribution'] == 'RedHat' and ansible_facts['distribution_version'] | version_compare('8', '=')
+      when: ansible_facts['distribution'] == 'RedHat' and ansible_facts['distribution_version'].split('.')[0] == '8'
 
     - name: Install jq
       yum:
