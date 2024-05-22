@@ -5,8 +5,8 @@
   vars:
     ambari_version: "2.7.8.0-1"
     odp_version: "3.2.3.0-2"
-    ambari_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/Ambari-2.7.8.0-1/"
-    odp_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/3.2.3.0-2/"
+    ambari_repo_url: "http://10.90.9.51/AMBARI-2.7.8.0-1/"
+    odp_repo_url: "http://10.90.9.51/ODP-3.2.3.0-2/3.2.3.0-2/"
     backup_dir: "/etc/ambari-server/conf_backup"
     databases: ["ambari", "hive", "ranger", "rangerkms", "oozie"]
     openjdk_path: "/usr/lib/jvm/java-1.8.0-openjdk"
