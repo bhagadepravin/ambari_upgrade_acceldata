@@ -1,5 +1,6 @@
 # Acceldata Ambari Upgrade Steps:-
 
+`git clone https://github.com/bhagadepravin/ambari_upgrade_acceldata.git`
 
 ## 1. Ambari Service Configs backup and restore:
 
