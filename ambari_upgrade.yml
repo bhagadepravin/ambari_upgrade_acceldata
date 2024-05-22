@@ -316,14 +316,12 @@
     - name: Upgrade Ambari server
       shell: /usr/sbin/ambari-server upgrade -s
       when: inventory_hostname == ambari_server_node
-      notify: Wait for Ambari Server to start listening on port 8080
 
     - name: Restart ambari-server
       service:
         name: ambari-server
         state: restarted
       when: inventory_hostname == ambari_server_node
-      notify: Wait for Ambari Server to start listening on port 8080
 
     - name: Install the Spark3 Management Pack
       shell: "echo yes | ambari-server install-mpack --mpack=https://mirror.odp.acceldata.dev/mpacks/ambari-mpacks-spark3-3.2.2.tar.gz"
