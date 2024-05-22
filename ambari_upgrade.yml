@@ -21,6 +21,11 @@
     - name: Retrieve Ambari server node from inventory
       set_fact:
         ambari_server_node: "{{ groups['ambari_server'][0] }}"
+        
+    - name: Set ansible_python_interpreter to Python 3 on RHEL 8
+      ansible.builtin.set_fact:
+        ansible_python_interpreter: /usr/bin/python3
+      when: ansible_facts['distribution'] == 'RedHat' and ansible_facts['distribution_version'] | version_compare('8', '=')
 
     - name: Install jq
       yum:
