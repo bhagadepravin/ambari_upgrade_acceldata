@@ -253,10 +253,26 @@
       
     - name: Install Ambari server and agent on the server node
       yum:
-        name:
-          - ambari-server
+        name: ambari-server
         state: present
+      async: 3600  # Set a timeout value, here 3600 seconds (1 hour)
+      poll: 5  # Poll for task status every 5 seconds
+      register: install_result
       when: inventory_hostname == ambari_server_node
+    
+    - name: Wait for package installation to complete
+      async_status:
+        jid: "{{ install_result.ansible_job_id }}"
+      register: job_result
+      until: job_result.finished
+      retries: 60  # Retry 60 times (5 minutes) with 5-second interval
+      delay: 5  # Wait 5 seconds between retries
+      when: install_result is defined
+    
+    - name: Display package installation result
+      debug:
+        msg: "Package installation result: {{ job_result }}"
+      when: install_result is defined
 
     - name: Install Ambari agent on all other nodes
       yum:
