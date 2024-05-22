@@ -1,4 +1,4 @@
-#!/bin/bash
+    #!/bin/bash
 
 # Color codes
 GREEN='\033[0;32m'
@@ -131,6 +131,15 @@ else
     sudo sh -c "echo 'deprecation_warnings=False' >> /etc/ansible/ansible.cfg"
 fi
 print_green "deprecation_warnings is set to False in /etc/ansible/ansible.cfg"
+
+# Check if the command_warnings option is already set and uncommented in ansible.cfg
+if ! grep -qE '^\s*command_warnings\s*=' /etc/ansible/ansible.cfg; then
+    # If not found, add the option
+    sed -i '/^\[defaults\]/a command_warnings=False' /etc/ansible/ansible.cfg
+else
+    # If found, ensure it's uncommented
+    sed -i 's/^\(\s*command_warnings\s*=\s*\)#\?\(.*\)/\1\2/' /etc/ansible/ansible.cfg
+fi
 
 # Retrieve the list of hosts from Ambari server
 print_yellow "Retrieving the list of hosts from Ambari server..."
