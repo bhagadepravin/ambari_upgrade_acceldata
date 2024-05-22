@@ -112,6 +112,16 @@ else
     fi
 fi
 
+# Check and configure host_key_checking in ansible.cfg
+ANSIBLE_CFG="/etc/ansible/ansible.cfg"
+if grep -q "^[^#]*host_key_checking" $ANSIBLE_CFG; then
+    print_green "host_key_checking is already uncommented."
+else
+    print_yellow "Uncommenting host_key_checking in $ANSIBLE_CFG..."
+    sudo sed -i 's/^#\(host_key_checking\)/\1/' $ANSIBLE_CFG
+    print_green "host_key_checking has been uncommented."
+fi
+
 # Retrieve the list of hosts from Ambari server
 print_yellow "Retrieving the list of hosts from Ambari server..."
 curl -s -u $AMBARI_API_USER:$AMBARI_API_PASS $AMBARI_API_URL | grep host_name | sed -n 's/.*"host_name" : "\([^\"]*\)".*/\1/p' > hostcluster.txt
