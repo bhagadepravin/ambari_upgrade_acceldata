@@ -56,47 +56,6 @@
             and verify_ambari_version_result.stdout_lines | length > 0 
             and verify_ambari_version_result.stdout_lines[0] == ambari_version
             and inventory_hostname == ambari_server_node
-    
-    - name: Stop Ambari server on the server node
-      systemd:
-        name: ambari-server
-        state: stopped
-      when: inventory_hostname == ambari_server_node
-
-    - name: Stop Ambari agent on all nodes
-      systemd:
-        name: ambari-agent
-        state: stopped
-
-    - name: Create backup directory for Ambari configuration
-      file:
-        path: "{{ backup_dir }}"
-        state: directory
-      when: inventory_hostname == ambari_server_node
-
-    - name: Backup Ambari server configuration
-      copy:
-        src: /etc/ambari-server/conf/
-        dest: "{{ backup_dir }}"
-        remote_src: yes
-        mode: preserve
-      when: inventory_hostname == ambari_server_node
-
-    - name: Backup Ambari databases
-      mysql_db:
-        state: dump
-        name: "{{ item }}"
-        target: "{{ backup_dir }}/{{ item }}_backup.sql"
-      with_items: "{{ databases }}"
-      ignore_errors: true
-      when: inventory_hostname == ambari_server_node
-      
-    - name: Verify database backups
-      stat:
-        path: "{{ backup_dir }}/{{ item }}_backup.sql"
-      with_items: "{{ databases }}"
-      register: backup_files
-      when: inventory_hostname == ambari_server_node
 
     - name: Get Ambari cluster name
       shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters | jq -r '.items[0].Clusters.cluster_name'"
@@ -166,8 +125,61 @@
       when: spark3_service.stdout | default("") | length > 0 and inventory_hostname in groups['ambari_server']
     - name: Uninstall Spark3 mpack if present
       shell: ambari-server uninstall-mpack --mpack-name="{{ spark3_mpack.stdout }}"
-      when: spark3_mpack.stdout | default("") | length > 0
+      when: spark3_mpack.stdout | default("") | length > 0 
+      
+    - name: Stop Ambari server on the server node
+      systemd:
+        name: ambari-server
+        state: stopped
+      when: inventory_hostname == ambari_server_node
+
+    - name: Stop Ambari agent on all nodes
+      systemd:
+        name: ambari-agent
+        state: stopped
+
+    - name: Create backup directory for Ambari configuration
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+      when: inventory_hostname == ambari_server_node
+
+    - name: Backup Ambari server configuration
+      copy:
+        src: /etc/ambari-server/conf/
+        dest: "{{ backup_dir }}"
+        remote_src: yes
+        mode: preserve
+      when: inventory_hostname == ambari_server_node
+
+    - name: Install python3-PyMySQL module
+      ansible.builtin.package:
+        name: python3-PyMySQL
+        state: present
+      when: ansible_facts['distribution'] == 'RedHat' and ansible_facts['distribution_version'].split('.')[0] == '8'
+
+    - name: Backup Ambari databases
+      mysql_db:
+        state: dump
+        name: "{{ item }}"
+        target: "{{ backup_dir }}/{{ item }}_backup.sql"
+      with_items: "{{ databases }}"
+      ignore_errors: true
+      when: inventory_hostname == ambari_server_node
+      
+    - name: Verify database backups
+      stat:
+        path: "{{ backup_dir }}/{{ item }}_backup.sql"
+      with_items: "{{ databases }}"
+      register: backup_files
+      when: inventory_hostname == ambari_server_node
       ignore_errors: yes
+
+    - name: Start Ambari Server
+      systemd:
+        name: ambari-server
+        state: started
+      when: inventory_hostname == ambari_server_node and spark3_service.stdout | default("") | length > 0
     
     - name: Stop SPARK3 service
       shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X PUT -d '{\"ServiceInfo\": {\"state\" : \"INSTALLED\"}}' http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
@@ -179,6 +191,12 @@
       ignore_errors: true
       when: inventory_hostname == ambari_server_node and spark3_service.stdout | default("") | length > 0
 
+    - name: Stop Ambari Server
+      systemd:
+        name: ambari-server
+        state: stopped
+      when: inventory_hostname == ambari_server_node and spark3_service.stdout | default("") | length > 0
+      
   tasks:
     - name: Erase Ambari server and agent
       yum:
