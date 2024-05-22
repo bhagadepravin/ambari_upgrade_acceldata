@@ -380,7 +380,7 @@
       ignore_errors: true
       when: is_ambari_server | default(false)
 
-    - name: Register the VDF with Ambari (Ambari >= 2.6)
+    - name: Register the VDF with Ambari
       uri:
         url: http://{{ ansible_fqdn }}:8080/api/v1/version_definitions
         method: POST
@@ -392,4 +392,4 @@
         body_format: raw
         status_code: 200,201,202
         return_content: no
-      when: (existing_vdf.content|from_yaml)['items'] | length == 0 and is_ambari_server | default(false)
+      when: existing_vdf is defined and 'items' not in existing_vdf and is_ambari_server | default(false)
