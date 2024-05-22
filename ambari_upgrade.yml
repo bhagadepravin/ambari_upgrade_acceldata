@@ -37,7 +37,20 @@
       yum:
         name: jq
         state: present
+        
+    - name: Update resolv.conf
+      lineinfile:
+        path: /etc/resolv.conf
+        regexp: '^nameserver\s+(?!8\.8\.8\.8)\S+'  # Matches any nameserver entry not equal to 8.8.8.8
+        state: absent  # Removes the line if found
+      become: yes
 
+    - name: Add nameserver 8.8.8.8
+      lineinfile:
+        path: /etc/resolv.conf
+        line: 'nameserver 8.8.8.8'
+      become: yes
+      
     - name: Verify Ambari version
       command: ambari-server --version
       register: verify_ambari_version_result
