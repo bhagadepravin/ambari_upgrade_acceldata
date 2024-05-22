@@ -53,15 +53,44 @@ MPACKS=("ambari-impala-mpack" "httpfs-ambari-mpack" "hue-ambari.mpack" "nifi-amb
 mkdir -p $WORKDIR
 cd $WORKDIR
 
+# Function to install Ansible on RHEL 8
+install_ansible_rhel8() {
+    echo "Enabling Ansible repository for RHEL 8..."
+    sudo subscription-manager repos --enable ansible-2.9-for-rhel-8-x86_64-rpms
+    echo "Installing Ansible..."
+    sudo yum install -y ansible
+}
+
+# Function to install Ansible on CentOS 7
+install_ansible_centos7() {
+    echo "Installing EPEL release and Ansible for CentOS 7..."
+    sudo yum install -y epel-release
+    sudo yum install -y ansible
+}
+
 # Check if Ansible is installed
 if ! command -v ansible &> /dev/null
 then
     echo "Ansible is not installed. Installing now..."
-     yum install -y epel-release
-     yum install -y ansible
+    
+    # Determine the OS version and install Ansible accordingly
+    if grep -q "Red Hat Enterprise Linux" /etc/redhat-release; then
+        if grep -q "release 8" /etc/redhat-release; then
+            install_ansible_rhel8
+        else
+            echo "Unsupported Red Hat version. Please install Ansible manually."
+            exit 1
+        fi
+    elif grep -q "CentOS Linux release 7" /etc/redhat-release; then
+        install_ansible_centos7
+    else
+        echo "Unsupported OS version. Please install Ansible manually."
+        exit 1
+    fi
 else
     echo "Ansible is already installed."
 fi
+
 
 # Retrieve the list of hosts from Ambari server
 curl -s -u $AMBARI_API_USER:$AMBARI_API_PASS $AMBARI_API_URL | grep host_name | sed -n 's/.*"host_name" : "\([^\"]*\)".*/\1/p' > hostcluster.txt
