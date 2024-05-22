@@ -339,24 +339,6 @@
         state: restarted
       when: inventory_hostname in groups['ambari_agents']
 
-- name: Upgrade Ambari and ODP
-  hosts: all
-  become: yes
-  vars:
-    ambari_version: "2.7.8.0-1"
-    odp_version: "3.2.3.0-2"
-    ambari_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/Ambari-2.7.8.0-1/"
-    odp_repo_url: "https://mirror.odp.acceldata.dev/ODP/rhel/3.2.3.0-2/"
-    backup_dir: "/etc/ambari-server/conf_backup"
-    databases: ["ambari", "hive", "ranger", "rangerkms", "oozie"]
-    openjdk_path: "/usr/lib/jvm/java-1.8.0-openjdk"
-    java: "openjdk"
-    kdc_admin_user: "admin/admin"
-    kdc_admin_password: "Acceldata@01"
-    ambari_admin_user: "admin"
-    ambari_admin_password: "admin"
-    vdf_file_path: "/root/ambari_upgrade_acceldata/odp_3.2.3.0-2_vdf.xml"
-
   tasks:
     - name: Check if current host is Ambari server
       block:
