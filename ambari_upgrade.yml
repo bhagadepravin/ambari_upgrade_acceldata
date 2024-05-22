@@ -324,16 +324,16 @@
       when: inventory_hostname == ambari_server_node
 
     - name: Install the Spark3 Management Pack
-      shell: "echo yes | ambari-server install-mpack --mpack=https://mirror.odp.acceldata.dev/mpacks/ambari-mpacks-spark3-3.2.2.tar.gz"
+      shell: "echo yes | ambari-server install-mpack --mpack=https://mirror.odp.acceldata.dev/mpacks/ambari-mpacks-spark3-3.3.3.tar.gz"
       ignore_errors: true
       when: inventory_hostname in groups['ambari_server']
 
     - name: Modify symbolic links for Spark3
       shell: |
         rm -rf /var/lib/ambari-server/resources/stacks/ODP/3.0/services/SPARK3
-        ln -s /var/lib/ambari-server/resources/mpacks/spark3-ambari-3.2.2.mpack-3.2.2/common-services/SPARK3/3.2.2 /var/lib/ambari-server/resources/stacks/ODP/3.0/services/SPARK3
+        ln -s /var/lib/ambari-server/resources/mpacks/spark3-ambari-3.3.3.mpack-3.3.3/common-services/SPARK3/3.3.3 /var/lib/ambari-server/resources/stacks/ODP/3.0/services/SPARK3
         rm -rf /var/lib/ambari-server/resources/stacks/ODP/3.1/services/SPARK3
-        ln -s /var/lib/ambari-server/resources/mpacks/spark3-ambari-3.2.2.mpack-3.2.2/common-services/SPARK3/3.2.2 /var/lib/ambari-server/resources/stacks/ODP/3.1/services/SPARK3
+        ln -s /var/lib/ambari-server/resources/mpacks/spark3-ambari-3.3.3.mpack-3.3.3/common-services/SPARK3/3.3.3 /var/lib/ambari-server/resources/stacks/ODP/3.1/services/SPARK3
       ignore_errors: true
       when: spark3_service.stdout | default("") | length > 0 and inventory_hostname == ambari_server_node
       
