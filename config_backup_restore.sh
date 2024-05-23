@@ -46,7 +46,7 @@ print_script_info() {
     echo -e "${GREEN}Ambari Configuration Backup and Restore Script${NC}"
     echo -e "This script enables you to backup and restore configurations for various services in Ambari-managed clusters."
     echo -e "Please ensure that you have set all necessary variables correctly before proceeding."
-    echo -e "Usage: ./ranger_config_backup_restore.sh"
+    echo -e "Usage: ./config_backup_restore.sh"
 }
 
 # Prompt user to confirm actions
