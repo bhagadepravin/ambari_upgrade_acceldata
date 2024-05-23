@@ -2,45 +2,13 @@
 
 `git clone https://github.com/bhagadepravin/ambari_upgrade_acceldata.git`
 
-## 1. Ambari Service Configs backup and restore:
+## 1. Service Configuration Backup before upgrade and Restore after update
+Currently Supports, HUE, Impala, Ranger, Ranger KMS, Spark3
+```
+https://github.com/bhagadepravin/ambari_upgrade_acceldata/blob/main/config_backup_restore.sh
 
--  [generate_sql_backup_restore.sh](https://github.com/bhagadepravin/ambari_upgrade_acceldata/blob/main/generate_sql_backup_restore.sh)
-
-   ```
-   cd ambari_upgrade_acceldata
-   bash generate_sql_backup_restore.sh
-   ```
-
-1. **Navigate to the directory containing the generated SQL script**:
-   ```bash
-   cd pre_upgrade
-   ```
-
-2. **Launch the MySQL client**:
-   ```bash
-   mysql 
-   or
-   mysql -u root -p
-   ```
-
-3. **When prompted, enter your MySQL root password** (`admin123` in your case`).
-
-4. **Source the SQL script**:
-   ```sql
-   source backup_configs.sql;
-   ```
-5. **Select the appropriate database**:
-   ```sql
-   use service_conf_bck;
-   select type_name  from configs_prior_patch;
-   select * from configs_prior_patch limit 1;
-   ```
-6. **Exit the MySQL client**:
-   ```sql
-   exit;
-   ```
-
-This will execute the SQL commands contained in `backup_configs.sql` within the `service_conf_bck` database in MySQL. Make sure to replace `admin123` with your actual MySQL root password, and adjust the database name if necessary.
+bash config_backup_restore.sh
+```
 
 ## 2. Update ambari_upgrade.yml
 
