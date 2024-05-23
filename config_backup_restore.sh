@@ -123,6 +123,23 @@ SPARK3_CONFIGS=(
     "spark3-thrift-sparkconf"
 )
 
+NIFI_CONFIGS=(
+    "nifi-ambari-config"
+    "nifi-authorizers-env"
+    "nifi-bootstrap-env"
+    "nifi-bootstrap-notification-services-env"
+    "nifi-env"
+    "nifi-flow-env"
+    "nifi-state-management-env"
+    "ranger-nifi-policymgr-ssl"
+    "ranger-nifi-security"
+    "nifi-login-identity-providers-env"
+    "nifi-properties"
+    "ranger-nifi-plugin-properties"
+    "nifi-ambari-ssl-config"
+    "ranger-nifi-audit"
+)
+
 # Function to backup configuration
 backup_config() {
     local config="$1"
@@ -238,6 +255,20 @@ restore_spark3_configs() {
     done
 }
 
+# Function to backup NiFi configurations
+backup_nifi_configs() {
+    for config in "${NIFI_CONFIGS[@]}"; do
+        backup_config "$config"
+    done
+}
+
+# Function to restore NiFi configurations
+restore_nifi_configs() {
+    for config in "${NIFI_CONFIGS[@]}"; do
+        restore_config "$config"
+    done
+}
+
 # Main function
 main() {
     print_script_info
@@ -273,7 +304,8 @@ backup_service_configs() {
     echo -e "4. Ranger"
     echo -e "5. Ranger KMS"
     echo -e "6. Spark3"    
-    echo -e "7. All (Backup configurations of all services like Hue, Impala, Kafka, Ranger, Ranger KMS)"    
+    echo -e "7. NiFi"
+    echo -e "8. All (Backup configurations of all services like Hue, Impala, Kafka, Ranger, Ranger KMS)"    
     read -p "Enter your choice: " choice
 
     case "$choice" in
@@ -296,9 +328,11 @@ backup_service_configs() {
             backup_spark3_configs
             ;;                
         "7")
+            backup_nifi_configs
+            ;;
+        "8")
             backup_all_configs
-            ;;            
-        *)
+            ;;
             print_error "Invalid option. Please select a valid service."
             ;;
     esac
@@ -312,6 +346,7 @@ backup_all_configs() {
     backup_ranger_configs
     backup_ranger_kms_configs
     backup_spark3_configs
+    backup_nifi_configs
 }
 
 # Function to restore individual service configurations
@@ -322,8 +357,9 @@ restore_service_configs() {
     echo -e "3. Kafka"
     echo -e "4. Ranger"
     echo -e "5. Ranger KMS"
-    echo -e "6. Spark3"    
-    echo -e "6. All (Restore configurations of all services like Hue, Impala, Kafka, Ranger, Ranger KMS)"        
+    echo -e "6. Spark3"
+    echo -e "7. NiFi"     
+    echo -e "8. All (Restore configurations of all services like Hue, Impala, Kafka, Ranger, Ranger KMS)"        
     read -p "Enter your choice: " choice
 
     case "$choice" in
@@ -345,9 +381,12 @@ restore_service_configs() {
         "6")
             restore_spark3_configs
             ;;            
-        "6")
+        "7")
+            restore_nifi_configs
+            ;;
+        "8")
             restore_all_configs
-            ;;            
+            ;;        
         *)
             print_error "Invalid option. Please select a valid service."
             ;;
@@ -361,6 +400,7 @@ restore_all_configs() {
     restore_ranger_configs
     restore_ranger_kms_configs
     restore_spark3_configs
+    restore_nifi_configs
 }
 
 # Execute main function
