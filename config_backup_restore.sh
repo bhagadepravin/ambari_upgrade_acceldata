@@ -107,6 +107,22 @@ RANGER_KMS_CONFIGS=(
     "ranger-kms-audit"
 )
 
+
+SPARK3_CONFIGS=(
+    "livy3-client-conf"
+    "livy3-env"
+    "livy3-log4j-properties"
+    "livy3-spark-blacklist"
+    "spark3-env"
+    "spark3-hive-site-override"
+    "spark3-log4j-properties"
+    "spark3-thrift-fairscheduler"
+    "spark3-metrics-properties"
+    "livy3-conf"
+    "spark3-defaults"
+    "spark3-thrift-sparkconf"
+)
+
 # Function to backup configuration
 backup_config() {
     local config="$1"
@@ -208,6 +224,20 @@ restore_ranger_kms_configs() {
     done
 }
 
+# Function to backup Spark3 configurations
+backup_spark3_configs() {
+    for config in "${SPARK3_CONFIGS[@]}"; do
+        backup_config "$config"
+    done
+}
+
+# Function to restore Spark3 configurations
+restore_spark3_configs() {
+    for config in "${SPARK3_CONFIGS[@]}"; do
+        restore_config "$config"
+    done
+}
+
 # Main function
 main() {
     print_script_info
@@ -242,7 +272,8 @@ backup_service_configs() {
     echo -e "3. Kafka"
     echo -e "4. Ranger"
     echo -e "5. Ranger KMS"
-    echo -e "6. All (Backup configurations of all services like Hue, Impala, Kafka, Ranger, Ranger KMS)"    
+    echo -e "6. Spark3"    
+    echo -e "7. All (Backup configurations of all services like Hue, Impala, Kafka, Ranger, Ranger KMS)"    
     read -p "Enter your choice: " choice
 
     case "$choice" in
@@ -262,6 +293,9 @@ backup_service_configs() {
             backup_ranger_kms_configs
             ;;
         "6")
+            backup_spark3_configs
+            ;;                
+        "7")
             backup_all_configs
             ;;            
         *)
@@ -277,6 +311,7 @@ backup_all_configs() {
     backup_kafka_configs
     backup_ranger_configs
     backup_ranger_kms_configs
+    backup_spark3_configs
 }
 
 # Function to restore individual service configurations
@@ -287,6 +322,7 @@ restore_service_configs() {
     echo -e "3. Kafka"
     echo -e "4. Ranger"
     echo -e "5. Ranger KMS"
+    echo -e "6. Spark3"    
     echo -e "6. All (Restore configurations of all services like Hue, Impala, Kafka, Ranger, Ranger KMS)"        
     read -p "Enter your choice: " choice
 
@@ -307,6 +343,9 @@ restore_service_configs() {
             restore_ranger_kms_configs
             ;;
         "6")
+            restore_spark3_configs
+            ;;            
+        "6")
             restore_all_configs
             ;;            
         *)
@@ -321,6 +360,7 @@ restore_all_configs() {
     restore_kafka_configs
     restore_ranger_configs
     restore_ranger_kms_configs
+    restore_spark3_configs
 }
 
 # Execute main function
