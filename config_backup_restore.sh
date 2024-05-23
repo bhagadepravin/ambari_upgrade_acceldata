@@ -333,6 +333,7 @@ backup_service_configs() {
         "8")
             backup_all_configs
             ;;
+        *)            
             print_error "Invalid option. Please select a valid service."
             ;;
     esac
