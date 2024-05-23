@@ -9,6 +9,7 @@ https://github.com/bhagadepravin/ambari_upgrade_acceldata/blob/main/config_backu
 
 bash config_backup_restore.sh
 ```
+<img width="1220" alt="image" src="https://github.com/bhagadepravin/ambari_upgrade_acceldata/assets/28974904/e0dfa085-2dec-4625-a408-d237b2b2531e">
 
 ## 2. Update ambari_upgrade.yml
 
