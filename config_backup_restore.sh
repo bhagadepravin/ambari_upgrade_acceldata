@@ -146,8 +146,12 @@ backup_config() {
     local backup_dir="upgrade_backup/$config"
     mkdir -p "$backup_dir"
     print_warning "Backing up configuration: $config"
+    local ssl_flag=""
+    if [ "$PROTOCOL" == "https" ]; then
+        ssl_flag="-s https"
+    fi
     python /var/lib/ambari-server/resources/scripts/configs.py \
-        -u "$USER" -p "$PASSWORD" -s "$PROTOCOL" -a get -t "$PORT" -l "$AMBARISERVER" -n "$CLUSTER" \
+        -u "$USER" -p "$PASSWORD" $ssl_flag -a get -t "$PORT" -l "$AMBARISERVER" -n "$CLUSTER" \
         -c "$config" -f "$backup_dir/$config.json" >/dev/null 2>&1
     if [ $? -eq 0 ]; then
         print_success "Backup of $config completed successfully."
@@ -161,8 +165,12 @@ restore_config() {
     local config="$1"
     local backup_dir="upgrade_backup/$config"
     print_warning "Restoring configuration: $config"
+    local ssl_flag=""
+    if [ "$PROTOCOL" == "https" ]; then
+        ssl_flag="-s https"
+    fi
     python /var/lib/ambari-server/resources/scripts/configs.py \
-        -u "$USER" -p "$PASSWORD" -s "$PROTOCOL" -a set -t "$PORT" -l "$AMBARISERVER" -n "$CLUSTER" \
+        -u "$USER" -p "$PASSWORD" $ssl_flag -a set -t "$PORT" -l "$AMBARISERVER" -n "$CLUSTER" \
         -c "$config" -f "$backup_dir/$config.json" >/dev/null 2>&1
     if [ $? -eq 0 ]; then
         print_success "Restore of $config completed successfully."
