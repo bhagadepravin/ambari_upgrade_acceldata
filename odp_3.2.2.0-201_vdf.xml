@@ -22,10 +22,10 @@
     <release>
         <type>STANDARD</type>
         <stack-id>ODP-3.2</stack-id>
-        <version>3.2.3.0</version>
+        <version>3.2.2.0</version>
         <build>2</build>
-        <compatible-with>3.2.3.[0-9]</compatible-with>
-        <release-notes>https://docs.acceldata.io/odp/documentation/release-notes-odp-3-2-3-0-2/</release-notes>
+        <compatible-with>3.2.2.[0-9]</compatible-with>
+        <release-notes>https://docs.acceldata.io/odp/documentation/release-notes-odp-3-2-2-0-2/</release-notes>
     </release>
 
     <manifest>
@@ -69,7 +69,7 @@
     <repository-info>
         <os family="redhat7">
             <repo>
-                <baseurl>http://10.90.9.51/ODP-3.2.3.0-2/3.2.3.0-2/</baseurl>
+                <baseurl>http://10.100.5.18/3.2.2.0-201/</baseurl>
                 <repoid>ODP-3.2</repoid>
                 <reponame>ODP</reponame>
                 <unique>true</unique>
@@ -83,7 +83,7 @@
         </os>
         <os family="redhat8">
             <repo>
-                <baseurl>http://10.90.9.51/ODP-3.2.3.0-2/3.2.3.0-2/</baseurl>
+                <baseurl>http://10.100.5.18/3.2.2.0-201/</baseurl>
                 <repoid>ODP-3.2</repoid>
                 <reponame>ODP</reponame>
                 <unique>true</unique>
