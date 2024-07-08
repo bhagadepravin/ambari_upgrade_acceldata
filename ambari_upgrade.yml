@@ -86,61 +86,6 @@
       debug:
         msg: "Cluster name: {{ cluster_name }}"
       when: inventory_hostname in groups['ambari_server']
-
-    - name: Check if Kerberos is enabled using curl
-      command: "curl -u admin:admin -X GET http://{{ ambari_server_node }}:8080/api/v1/clusters/{{ cluster_name }}/services/KERBEROS"
-      register: kerberos_status
-      ignore_errors: true
-      when: is_ambari_server | default(false)
-
-    - name: Check Kerberos status
-      set_fact:
-        kerberos_enabled: "{{ kerberos_status is succeeded }}"
-      when: is_ambari_server | default(false)
-
-    - name: Add KDC credentials to Ambari
-      uri:
-        method: POST
-        url: "http://{{ ambari_server_node }}:8080/api/v1/clusters/{{ cluster_name }}/credentials/kdc.admin.credential"
-        url_username: "{{ ambari_admin_user }}"
-        force_basic_auth: yes
-        url_password: "{{ ambari_admin_password }}"
-        body: "{ \"Credential\" : { \"principal\" : \"{{ kdc_admin_user }}\", \"key\" : \"{{ kdc_admin_password }}\", \"type\" : \"temporary\" } }"
-        body_format: json
-        status_code: 201
-        headers:
-          'X-Requested-By': 'ambari'
-        return_content: yes
-      register: api_result
-      ignore_errors: true
-      when: kerberos_enabled | default(false) and inventory_hostname == ambari_server_node
-      
-    - name: Check if SPARK3 service is present
-      command: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
-      register: spark3_service
-      ignore_errors: true
-      when: is_ambari_server | default(false)
-    
-    - name: Get Spark3 mpack name
-      shell: grep -w "spark3" /var/lib/ambari-server/resources/mpacks/*/mpack.json | egrep -v "common|addon" | cut -d '"' -f 4
-      register: spark3_mpack
-      changed_when: false
-      check_mode: no
-      ignore_errors: yes
-      when: spark3_service.stdout | default("") | length > 0 and inventory_hostname in groups['ambari_server']
-    
-    - name: Find nodes with Spark3 service installed
-      shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3/components/SPARK3_SERVER | jq -r '.host_components[].HostRoles.host_name'"
-      register: spark3_nodes
-      when: spark3_service.stdout | default("") | length > 0 and inventory_hostname in groups['ambari_server']
-    
-    - name: Display Spark3 nodes
-      debug:
-        msg: "Spark3 is installed on: {{ spark3_nodes.stdout_lines }}"
-      when: spark3_service.stdout | default("") | length > 0 and inventory_hostname in groups['ambari_server']
-    - name: Uninstall Spark3 mpack if present
-      shell: ambari-server uninstall-mpack --mpack-name="{{ spark3_mpack.stdout }}"
-      when: spark3_mpack.stdout | default("") | length > 0 
       
     - name: Stop Ambari server on the server node
       systemd:
@@ -171,7 +116,7 @@
       ansible.builtin.package:
         name: python3-PyMySQL
         state: present
-      when: ansible_facts['distribution'] == 'RedHat' and ansible_facts['distribution_version'].split('.')[0] == '8'
+      when: ansible_facts['distribution'] == 'Rocky' and ansible_facts['distribution_version'].split('.')[0] == '8'
 
     - name: Backup Ambari databases
       mysql_db:
@@ -194,23 +139,14 @@
       systemd:
         name: ambari-server
         state: started
-      when: is_ambari_server | default(false) and spark3_service.stdout | default("") | length > 0
+      when: is_ambari_server | default(false)
     
-    - name: Stop SPARK3 service
-      shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X PUT -d '{\"ServiceInfo\": {\"state\" : \"INSTALLED\"}}' http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
-      ignore_errors: true
-      when: is_ambari_server | default(false) and spark3_service.stdout | default("") | length > 0
-    
-    - name: Delete SPARK3 service
-      shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X DELETE http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
-      ignore_errors: true
-      when: is_ambari_server | default(false) and spark3_service.stdout | default("") | length > 0
 
     - name: Stop Ambari Server
       systemd:
         name: ambari-server
         state: stopped
-      when: is_ambari_server | default(false) and spark3_service.stdout | default("") | length > 0
+      when: is_ambari_server | default(false)
       
   tasks:
     - name: Erase Ambari server and agent
@@ -325,20 +261,6 @@
         state: restarted
       when: is_ambari_server | default(false)
 
-    - name: Install the Spark3 Management Pack
-      shell: "echo yes | ambari-server install-mpack --mpack=https://mirror.odp.acceldata.dev/mpacks/ambari-mpacks-spark3-3.3.3.tar.gz"
-      ignore_errors: true
-      when: inventory_hostname in groups['ambari_server']
-
-    - name: Modify symbolic links for Spark3
-      shell: |
-        rm -rf /var/lib/ambari-server/resources/stacks/ODP/3.0/services/SPARK3
-        ln -s /var/lib/ambari-server/resources/mpacks/spark3-ambari-3.3.3.mpack-3.3.3/common-services/SPARK3/3.3.3 /var/lib/ambari-server/resources/stacks/ODP/3.0/services/SPARK3
-        rm -rf /var/lib/ambari-server/resources/stacks/ODP/3.1/services/SPARK3
-        ln -s /var/lib/ambari-server/resources/mpacks/spark3-ambari-3.3.3.mpack-3.3.3/common-services/SPARK3/3.3.3 /var/lib/ambari-server/resources/stacks/ODP/3.1/services/SPARK3
-      ignore_errors: true
-      when: spark3_service.stdout | default("") | length > 0 and inventory_hostname == ambari_server_node
-      
     - name: Wait for Ambari Server to start listening on port 8080
       wait_for:
         port: 8080
