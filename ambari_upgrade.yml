@@ -55,12 +55,12 @@
       command: ambari-server --version
       register: verify_ambari_version_result
       ignore_errors: true
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
  
     - name: Display current Ambari version
       debug:
         msg: "Ambari version output: {{ verify_ambari_version_result.stdout_lines }}"
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
     
     - name: Exit playbook if Ambari version is same, update ambari_version.
       fail:
@@ -73,12 +73,12 @@
     - name: Get Ambari cluster name
       shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters | jq -r '.items[0].Clusters.cluster_name'"
       register: cluster_name
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
 
     - name: Set cluster name fact
       set_fact:
         cluster_name: "{{ cluster_name.stdout }}"
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
 
     - name: Display cluster name
       debug:
@@ -89,12 +89,12 @@
       command: "curl -u admin:admin -X GET http://{{ ambari_server_node }}:8080/api/v1/clusters/{{ cluster_name }}/services/KERBEROS"
       register: kerberos_status
       ignore_errors: true
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
 
     - name: Check Kerberos status
       set_fact:
         kerberos_enabled: "{{ kerberos_status is succeeded }}"
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
 
     - name: Add KDC credentials to Ambari
       uri:
@@ -117,7 +117,7 @@
       command: "curl -u admin:admin -H 'X-Requested-By: ambari' -X GET http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
       register: spark3_service
       ignore_errors: true
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
     
     - name: Get Spark3 mpack name
       shell: grep -w "spark3" /var/lib/ambari-server/resources/mpacks/*/mpack.json | egrep -v "common|addon" | cut -d '"' -f 4
@@ -178,37 +178,37 @@
         target: "{{ backup_dir }}/{{ item }}_backup.sql"
       with_items: "{{ databases }}"
       ignore_errors: true
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
       
     - name: Verify database backups
       stat:
         path: "{{ backup_dir }}/{{ item }}_backup.sql"
       with_items: "{{ databases }}"
       register: backup_files
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
       ignore_errors: yes
 
     - name: Start Ambari Server
       systemd:
         name: ambari-server
         state: started
-      when: inventory_hostname == ambari_server_node and spark3_service.stdout | default("") | length > 0
+      when: is_ambari_server | default(false) and spark3_service.stdout | default("") | length > 0
     
     - name: Stop SPARK3 service
       shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X PUT -d '{\"ServiceInfo\": {\"state\" : \"INSTALLED\"}}' http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
       ignore_errors: true
-      when: inventory_hostname == ambari_server_node and spark3_service.stdout | default("") | length > 0
+      when: is_ambari_server | default(false) and spark3_service.stdout | default("") | length > 0
     
     - name: Delete SPARK3 service
       shell: "curl -u admin:admin -H 'X-Requested-By: ambari' -X DELETE http://{{ inventory_hostname }}:8080/api/v1/clusters/{{ cluster_name }}/services/SPARK3"
       ignore_errors: true
-      when: inventory_hostname == ambari_server_node and spark3_service.stdout | default("") | length > 0
+      when: is_ambari_server | default(false) and spark3_service.stdout | default("") | length > 0
 
     - name: Stop Ambari Server
       systemd:
         name: ambari-server
         state: stopped
-      when: inventory_hostname == ambari_server_node and spark3_service.stdout | default("") | length > 0
+      when: is_ambari_server | default(false) and spark3_service.stdout | default("") | length > 0
       
   tasks:
     - name: Erase Ambari server and agent
@@ -271,7 +271,7 @@
       async: 3600  # Set a timeout value, here 3600 seconds (1 hour)
       poll: 5  # Poll for task status every 5 seconds
       register: install_result
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
     
     - name: Wait for package installation to complete
       async_status:
@@ -298,30 +298,30 @@
         src: "{{ backup_dir }}/ambari.properties"
         dest: /etc/ambari-server/conf/ambari.properties
         remote_src: yes
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
 
     - name: Restore Ambari password.dat
       copy:
         src: "{{ backup_dir }}/password.dat"
         dest: /etc/ambari-server/conf/password.dat
         remote_src: yes
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
 
     - name: Stop Ambari server on the server node
       systemd:
         name: ambari-server
         state: stopped
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
       
     - name: Upgrade Ambari server
       shell: /usr/sbin/ambari-server upgrade -s
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
 
     - name: Restart ambari-server
       service:
         name: ambari-server
         state: restarted
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
 
     - name: Install the Spark3 Management Pack
       shell: "echo yes | ambari-server install-mpack --mpack=https://mirror.odp.acceldata.dev/mpacks/ambari-mpacks-spark3-3.3.3.tar.gz"
@@ -342,7 +342,7 @@
         port: 8080
         host: 0.0.0.0
         delay: 1
-      when: inventory_hostname == ambari_server_node
+      when: is_ambari_server | default(false)
 
     - name: Restart ambari-agent
       service:
