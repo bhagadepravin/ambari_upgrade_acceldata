@@ -15,7 +15,7 @@
     kdc_admin_password: "Acceldata@01"
     ambari_admin_user: "admin"
     ambari_admin_password: "admin"
-    vdf_file_path: "/root/ambari_upgrade_acceldata/odp_3.2.3.0-2_vdf.xml"
+    vdf_file_path: "/root/ambari_upgrade_acceldata/odp_3.2.2.0-201_vdf.xml"
     
   pre_tasks:
     - name: Retrieve Ambari server node from inventory
