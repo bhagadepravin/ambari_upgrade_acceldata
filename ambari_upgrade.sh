@@ -86,31 +86,32 @@ then
     print_yellow "Ansible is not installed. Installing now..."
     
     # Determine the OS version and install Ansible accordingly
-    if grep -q "Red Hat Enterprise Linux" /etc/redhat-release; then
+    if grep -q "Red Hat Enterprise Linux" /etc/redhat-release || grep -q "Rocky Linux" /etc/redhat-release; then
         if grep -q "release 8" /etc/redhat-release; then
             install_ansible_rhel8
-            ansible_password="R#el@1+1=2"
+            ansible_password="Passw0rd"
         else
             print_red "Unsupported Red Hat version. Please install Ansible manually."
             exit 1
         fi
     elif grep -q "CentOS Linux release 7" /etc/redhat-release; then
         install_ansible_centos7
-        ansible_password="Caps@Lock"
+        ansible_password="Passw0rd"
     else
         print_red "Unsupported OS version. Please install Ansible manually."
         exit 1
     fi
 else
     print_green "Ansible is already installed."
-    if grep -q "Red Hat Enterprise Linux" /etc/redhat-release; then
+    if grep -q "Red Hat Enterprise Linux" /etc/redhat-release || grep -q "Rocky Linux" /etc/redhat-release; then
         if grep -q "release 8" /etc/redhat-release; then
-            ansible_password="R#el@1+1=2"
+            ansible_password="Passw0rd"
         fi
     elif grep -q "CentOS Linux release 7" /etc/redhat-release; then
-        ansible_password="Caps@Lock"
+        ansible_password="Passw0rd"
     fi
 fi
+
 
 # Check and configure host_key_checking in ansible.cfg
 ANSIBLE_CFG="/etc/ansible/ansible.cfg"
