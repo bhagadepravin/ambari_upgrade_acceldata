@@ -144,7 +144,7 @@
       systemd:
         name: ambari-server
         state: stopped
-      when: inventory_hostname == ambari_server
+      when: is_ambari_server | default(false)
 
     - name: Stop Ambari agent on all nodes
       systemd:
@@ -155,7 +155,7 @@
       file:
         path: "{{ backup_dir }}"
         state: directory
-      when: inventory_hostname == ambari_server
+      when: is_ambari_server | default(false)
 
     - name: Backup Ambari server configuration
       copy:
@@ -163,7 +163,7 @@
         dest: "{{ backup_dir }}"
         remote_src: yes
         mode: preserve
-      when: inventory_hostname == ambari_server
+      when: is_ambari_server | default(false)
 
     - name: Install python3-PyMySQL module
       ansible.builtin.package:
