@@ -68,8 +68,8 @@ cd $WORKDIR
 # Function to install Ansible on RHEL 8
 install_ansible_rhel8() {
     print_yellow "Enabling Ansible repository for RHEL 8..."
-    sudo subscription-manager repos --enable ansible-2.9-for-rhel-8-x86_64-rpms
     print_yellow "Installing Ansible..."
+    sudo yum install -y epel-release
     sudo yum install -y ansible
 }
 
